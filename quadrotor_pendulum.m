@@ -41,6 +41,25 @@ end
 % we have three uncontrollable modes lambda = 0,0,0
 
 Q = eye(size(A));
-R = 1;
+R = 0.1;
 
 [K,S,e] = lqr(A,B,Q,R,[]);
+
+% SIMUALTION
+
+C = eye(size(A));
+% outputs we are interested are
+% - r1:     the displacement of 
+% - r2:     velocity of pendulum relative to quadrotor
+% - x1:     x-direction displacement of quadrotor relative to inertial
+%           coordinate frame O
+% - x2:     x-direction velocity of quadrotor relative to inertial
+%           coordinate frame O
+% - beta:   pitch angle of quad (rotation angle around y-axis)
+
+sys = ss(A-B*K,B,C,[]);
+
+figure(1);
+clf;
+step(sys);
+grid();
