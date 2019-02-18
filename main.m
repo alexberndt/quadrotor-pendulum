@@ -75,26 +75,57 @@ sysd_closedloop = ss(A-B*K,B,C,[],Ts);
 [states_trajectory, time] = step(sysd_closedloop);
 
 %% PLOT SIMULATION RESULTS
+% 
+% Simple 2D plots to quickly see the performance characteristics of each
+% decoupled controller
 
-figure(1);
-clf;
-stairs(time, states_trajectory(:,1));
-grid();
+% Show 5 States of x-direction control
+
+show_x_horizontal_performance_plots = true;
+if show_x_horizontal_performance_plots
+    figure(1);
+    clf;
+    subplot 511;
+    stairs(time, states_trajectory(:,1), 'm-'); grid();
+    ylabel('$r_1$ [m]','interpreter','latex')
+    
+    subplot 512;
+    stairs(time, states_trajectory(:,2), 'm-');  grid();
+    ylabel('$r_2$ [m/s]','interpreter','latex')
+    
+    subplot 513;
+    stairs(time, states_trajectory(:,3), 'b-');  grid();
+    ylabel('$x_1$ [m]','interpreter','latex')
+    
+    subplot 514;
+    stairs(time, states_trajectory(:,4), 'b-');  grid();
+    ylabel('$x_2$ [m/s]','interpreter','latex')
+    
+    subplot 515;
+    stairs(time, states_trajectory(:,5), 'k-');  grid();
+    ylabel('$\beta$ [rad]','interpreter','latex')
+    
+    xlabel('Time [s]');
+end
 
 %% PLOT SIMULATION IN 3D
+%
+% A full 3D visualization of the quadrotor given previous simulations
 
-show_plot = true;
+show_3D_visualization = true;
+if show_3D_visualization 
+    x =     states_trajectory(:,3);
+    y =     states_trajectory(:,3);
+    z =     2*ones(length(time),1);
 
-if show_plot 
-    x = states_trajectory(:,3);
-    y = states_trajectory(:,3);
-    z = 2*ones(length(time),1);
-
-    roll = states_trajectory(:,5);
+    roll =  states_trajectory(:,5);
     pitch = states_trajectory(:,5);
-    yaw = zeros(length(time),1);
+    yaw =   zeros(length(time),1);
+    
+    r =     states_trajectory(:,1);
+    s =     states_trajectory(:,1);
 
-    X = [x,y,z,roll,pitch,yaw];
+    X =     [x,y,z,roll,pitch,yaw,r,s];
     visualize_quadrotor_trajectory(X);
 end
 

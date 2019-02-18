@@ -20,54 +20,96 @@ function visualize_quadrotor_trajectory(states_trajectory)
     
     %% INIT
     
-    x_r=0.3;
-    y_r=0.3;
-    z_r=2;
-    
-    % quadrotor frame and circle drawing
-    l=0.3;      
-    rc=0.1;
-    rx=rc*cos(linspace(0,2*pi,1e1));
-    rx=[rx rx(1)];
-    ry=rc*sin(linspace(0,2*pi,1e1));
-    ry=[ry ry(1)];
-    
-    X = states_trajectory(:,1:6);
-    
-    figure()
-    clf;
-    grid();
+    % X is the 6-states of the quadrotor
+    X = states_trajectory(:,1:8);
+    [N,~] = size(X);
 
+    % reference set point
+    x_r = -0.51;
+    y_r = -0.51;
+    z_r = 2;
+
+    % quadrotor frame and circle drawings
+    l =  0.3;   
+    pl = 0.756; % pendulum height
+    rc = 0.1;
+    rx = rc*cos(linspace(0,2*pi,20));
+    rx = [rx rx(1)];
+    ry = rc*sin(linspace(0,2*pi,20));
+    ry = [ry ry(1)];
+    
+    % init figure
+    figure(42)
+    clf;
+    
+    
+    % define plot axes limits
     w = 1.5;
     Ax = [-w+x_r w+x_r -w+y_r w+y_r -w+z_r w+z_r];
 
-    [N,~] = size(X);
-    
+    % loop through trajectory inputs
     for j = 1:N
-        
-        % X is the 6-states of the quadrotor
-        
-        % obtain relative positions
+
+        % obtain rotational matrix for current RPY angles
         Rt = R(X(j,4:6)); 
+        
+        % obtain rotational matrix for pendulum relative to quad
+        
+        r = X(j,7);
+        s = X(j,8);
+%         disp(r);
+        roll_rel = tan(r/pl);
+        pitch_rel = tan(s/pl);
+        Rp = R([roll_rel, pitch_rel, 0]);
+        
+        % define each quadrotor circle
         R1 = Rt*([ l+rc+rx ; ry  ; zeros(size(rx)) ]) + X(j,1:3)';
         R2 = Rt*([ rx ; l+rc+ry  ; zeros(size(rx)) ]) + X(j,1:3)';
         R3 = Rt*([ -l-rc+rx ; ry ; zeros(size(rx)) ]) + X(j,1:3)';
         R4 = Rt*([ rx ; -l-rc+ry ; zeros(size(rx)) ]) + X(j,1:3)';
         
-        % create plotting frames
+        % define black arms
         A1 = Rt*([-l l;0 0;0 0]) + X(j,1:3)';
         A2 = Rt*([0 0; -l l;0 0]) + X(j,1:3)';
         
-        % plot to 3D plane
-        plot3(x_r,y_r,z_r,'r*',A1(1,:),A1(2,:),A1(3,:),'k',A2(1,:),A2(2,:),A2(3,:),'k',R1(1,:),R1(2,:),R1(3,:),'r',R2(1,:),R2(2,:),R2(3,:),'b',R3(1,:),R3(2,:),R3(3,:),'b',R4(1,:),R4(2,:),R4(3,:),'b');
-    
+        % define magenta inverted pendulum
+        P1 = Rp*([0 0;0 0; 0 pl]) + X(j,1:3)';
         
+        % verticle reference position of pendulum
+        Pv = ([0 0;0 0; 0 pl]) + X(j,1:3)';
+        
+        % plot to 3D plane
+        
+        plot3( x_r,y_r,z_r,'r*');
+        hold on
+        
+        % plot quadrotor frame cross and circles
+        plot3( A1(1,:),A1(2,:),A1(3,:),'k',A2(1,:),A2(2,:),A2(3,:),'k');
+        plot3( R1(1,:),R1(2,:),R1(3,:),'r',R2(1,:),R2(2,:),R2(3,:),'b',R3(1,:),R3(2,:),R3(3,:),'b',R4(1,:),R4(2,:),R4(3,:),'b');
+        
+        % plot equilibrium equilibrium (verticle upwards)
+        plot3( Pv(1,:),Pv(2,:),Pv(3,:),'c');
+        plot3( Pv(1,2),Pv(2,2),Pv(3,2),'c*');
+        
+        % plot current pendulum position
+        plot3( P1(1,:),P1(2,:),P1(3,:),'m');
+        plot3( P1(1,end),P1(2,end),P1(3,end),'m*');
+        
+        hold off
+        grid();
+        
+        
+        % set axes
         axis(Ax);
+        view([20 30]);
+        
         set(gca,'box','on')
-        drawnow
+        drawnow        
     end
     
+    % Function to determine the rotation matrix for plotting
     function y = R(Xrot)
+        
         phi = Xrot(1);
         theta = Xrot(2);
         psi = Xrot(3);
