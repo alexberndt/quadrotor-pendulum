@@ -72,10 +72,16 @@ ry=rc*sin(linspace(0,2*pi,1e1));
 ry=[ry ry(1)];
 
 
+%%
 figure(2)
 clf;
 grid();
-for j=1:length(T)
+
+X = X(:,1:6);
+
+[N,~] = size(X);
+
+for j=1:N
    Rt=R(X(j,4:6)); 
     R1=Rt*([l+rc+rx;ry;zeros(size(rx))])+X(j,1:3)';
     R2=Rt*([rx;l+rc+ry;zeros(size(rx))])+X(j,1:3)';
@@ -92,7 +98,7 @@ axis(Ax);
 set(gca,'box','on')
 drawnow
 end
-shg
+
 
 function y=R(Xrot)
 phi=Xrot(1);

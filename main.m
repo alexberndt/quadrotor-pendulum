@@ -52,7 +52,7 @@ sysc = ss(Ac,Bc,Cc,[]);
 
 %% DISCRETIZE SYSTEM
 
-Ts = 0.1;  % 10 ms sampling time
+Ts = 0.05;  % 10 ms sampling time
 sysd = c2d(sysc,Ts);
 
 A = sysd.A;
@@ -81,13 +81,22 @@ clf;
 stairs(time, states_trajectory(:,1));
 grid();
 
-%% PLOT SIMULATION GRAPHICALLY
-show_trajectory = true;
+%% PLOT SIMULATION IN 3D
 
+show_plot = true;
 
+if show_plot 
+    x = states_trajectory(:,3);
+    y = states_trajectory(:,3);
+    z = 2*ones(length(time),1);
 
-% visualize_quadrotor_trajectory(time,states_trajectory)
+    roll = states_trajectory(:,5);
+    pitch = states_trajectory(:,5);
+    yaw = zeros(length(time),1);
 
+    X = [x,y,z,roll,pitch,yaw];
+    visualize_quadrotor_trajectory(X);
+end
 
 
 
