@@ -86,6 +86,10 @@ show_trajectory = true;
 
 
 
+% visualize_quadrotor_trajectory(time,states_trajectory)
+
+
+
 
 
 
