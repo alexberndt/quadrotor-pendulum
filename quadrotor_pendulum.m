@@ -17,7 +17,7 @@ A = [0   1 0 0 0;
  
 B = [0;0;0;0;1];
  
-%% CHECK CONTROLLABILITY
+%% CHECK CONTROLLABILITY OF CONTINUOUS TIME SYSTEM
  
 ctrb(A,B)
 
@@ -35,6 +35,10 @@ for idx = 1:numel(eigvals)
  disp(rk);
  disp('----------------');
 end
+
+%% DISCRETIZE SYSTEM
+
+
 
 %% LINEAR QUADRATIC REGULATOR
 
