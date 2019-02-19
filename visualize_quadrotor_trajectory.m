@@ -20,17 +20,17 @@ function visualize_quadrotor_trajectory(states_trajectory)
     
     %% INIT
     
-    % X is the 6-states of the quadrotor
+    % X is the 6-states of the quadrotor, 2-states of pendulum
     X = states_trajectory(:,1:8);
     [N,~] = size(X);
 
-    % reference set point
+    % reference set point (center of plot)
     x_r = -0.51;
     y_r = -0.51;
     z_r = 2;
 
     % quadrotor frame and circle drawings
-    l =  0.3;   
+    l =  0.34;   
     pl = 0.756; % pendulum height
     rc = 0.1;
     rx = rc*cos(linspace(0,2*pi,20));
@@ -39,9 +39,8 @@ function visualize_quadrotor_trajectory(states_trajectory)
     ry = [ry ry(1)];
     
     % init figure
-    figure(42)
+    figure(42);
     clf;
-    
     
     % define plot axes limits
     w = 1.5;
@@ -57,7 +56,6 @@ function visualize_quadrotor_trajectory(states_trajectory)
         
         r = X(j,7);
         s = X(j,8);
-%         disp(r);
         roll_rel = tan(r/pl);
         pitch_rel = tan(s/pl);
         Rp = R([roll_rel, pitch_rel, 0]);
@@ -78,8 +76,7 @@ function visualize_quadrotor_trajectory(states_trajectory)
         % verticle reference position of pendulum
         Pv = ([0 0;0 0; 0 pl]) + X(j,1:3)';
         
-        % plot to 3D plane
-        
+        % plot coordinate reference
         plot3( x_r,y_r,z_r,'r*');
         hold on
         
@@ -98,10 +95,9 @@ function visualize_quadrotor_trajectory(states_trajectory)
         hold off
         grid();
         
-        
         % set axes
         axis(Ax);
-        view([20 30]);
+        view(3);
         
         set(gca,'box','on')
         drawnow        
@@ -120,7 +116,7 @@ function visualize_quadrotor_trajectory(states_trajectory)
 
         % rotation around y with theta
         Rtheta = [cos(theta)    0       sin(theta);
-                  0             1       0
+                  0             1       0;
                  -sin(theta)    0       cos(theta)];
 
         % rotation around x with phi 

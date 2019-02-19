@@ -7,7 +7,7 @@
 
 % Constants
 g = 9.81;   % m/s^2
-L = 0.6;    % meters
+L = 0.565;  % meters
 
 % continuous-time state space matrices
 Ac = [0   1 0 0 0;
