@@ -43,7 +43,7 @@ function visualize_quadrotor_trajectory(states_trajectory)
     clf;
     
     % define plot axes limits
-    w = 1.5;
+    w = 5;
     Ax = [-w+x_r w+x_r -w+y_r w+y_r -w+z_r w+z_r];
 
     % loop through trajectory inputs
@@ -98,7 +98,7 @@ function visualize_quadrotor_trajectory(states_trajectory)
         % set axes
         axis(Ax);
         view(3);
-        % view([0 0]);
+        view([0 0]);
         
         set(gca,'box','on')
         drawnow        

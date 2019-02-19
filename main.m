@@ -9,28 +9,29 @@ clear
 
 % Constants
 g = 9.81;       % m/s^2
+m = 0.5;        % kg
 L = 0.565;      % meters (Length of pendulum to center of mass)
 l = 0.17;       % meters (Quadrotor center to rotor center)
 I_yy = 3.2e-3;  % kg m^2 (Quadrotor inertia around y-axis)
 I_xx = I_yy;
 I_zz = 5.5e-3;  % kg m^2 (Quadrotor inertia around z-axis) 
 
-% continuous-time state space matrices
-Ac = [0   1 0 0  0 0 ;
-     g/L  0 0 0 -g 0 ;
-     0    0 0 1  0 0 ;
-     0    0 0 0  g 0 ;
-     0    0 0 0  0 1 ;
-     0    0 0 0  0 0];
+% SUBSYSTEM 1 - pitch angle dynamics (around y-axis)
+Ac1 = [   0   1 0 0  0 0 ;
+         g/L  0 0 0 -g 0 ;
+         0    0 0 1  0 0 ;
+         0    0 0 0  g 0 ;
+         0    0 0 0  0 1 ;
+         0    0 0 0  0 0 ];
  
-Bc = [0         0;
+Bc1 = [0         0;
       0         0;
       0         0;  
       0         0;  
       0         0;
       l/I_yy -l/I_yy];
 
-Cc = eye(size(Ac));
+Cc1 = eye(size(Ac1));
 % outputs we are interested are
 % - r1:     the displacement of 
 % - r2:     velocity of pendulum relative to quadrotor
@@ -38,7 +39,51 @@ Cc = eye(size(Ac));
 %           coordinate frame O
 % - x2:     x-direction velocity of quadrotor relative to inertial
 %           coordinate frame O
-% - beta:   pitch angle of quad (rotation angle around y-axis)
+% - beta1:  pitch angle of quad (rotation angle around y-axis)
+% - beta2:  pitch angle rate of quad (rotation angle around y-axis)
+
+% SUBSYSTEM 2 - pitch angle dynamics (around x-axis)
+Ac2 = [   0   1 0 0  0 0 ;
+         g/L  0 0 0 -g 0 ;
+         0    0 0 1  0 0 ;
+         0    0 0 0  g 0 ;
+         0    0 0 0  0 1 ;
+         0    0 0 0  0 0 ];
+ 
+Bc2 = [0         0;
+      0         0;
+      0         0;  
+      0         0;  
+      0         0;
+      l/I_xx -l/I_xx];
+
+Cc2 = eye(size(Ac2));
+% outputs we are interested are
+% - s1:     the displacement of 
+% - s2:     velocity of pendulum relative to quadrotor
+% - y1:     x-direction displacement of quadrotor relative to inertial
+%           coordinate frame O
+% - y2:     x-direction velocity of quadrotor relative to inertial
+%           coordinate frame O
+% - gamma1: pitch angle of quad (rotation angle around x-axis)
+% - gamma2: pitch angle rate of quad (rotation angle around x-axis)
+
+% SUBSYSTEM 3 - verticle translational dynamics
+Ac3 = [0 1;
+       0 0];
+
+Bc3 = [0   0   0   0   ;
+       1/m 1/m 1/m 1/m];
+   
+Cc3 = eye(size(Ac3));
+
+% FULL SYSTEM CONCATENATION
+Ac = blkdiag(Ac1,Ac2,Ac3);
+Bc = [Bc1        zeros(6,2);
+      zeros(6,2) Bc2;
+      Bc3            ];
+  
+Cc = blkdiag(Cc1,Cc2,Cc3);
 
 % continuous-time state-space model
 sysc = ss(Ac,Bc,Cc,[]);
@@ -46,23 +91,25 @@ sysc = ss(Ac,Bc,Cc,[]);
 %% CHECK CONTROLLABILITY OF CONTINUOUS TIME SYSTEM
  
 Ctrb_rank = rank(ctrb(Ac,Bc));
+disp('Number of states');
+disp(size(Ac));
 disp('Rank of controllability matrix');
 disp(Ctrb_rank);
 
-% not controllable
+% IF not controllable
 % use Hautus test 
 
-eigvals = eig(Ac);
-
-for idx = 1:numel(eigvals)
- lambda = eigvals(idx);
- disp('Eigenvalue: ');
- disp(lambda)
- rk = rank([(eye(size(Ac))*lambda-Ac) Bc]);
- disp('rank: ');
- disp(rk);
- disp('----------------');
-end
+% eigvals = eig(Ac);
+% 
+% for idx = 1:numel(eigvals)
+%  lambda = eigvals(idx);
+%  disp('Eigenvalue: ');
+%  disp(lambda)
+%  rk = rank([(eye(size(Ac))*lambda-Ac) Bc]);
+%  disp('rank: ');
+%  disp(rk);
+%  disp('----------------');
+% end
 
 %% DISCRETIZE SYSTEM
 
@@ -84,17 +131,44 @@ R = 0.1*eye(length(B(1,:)));
 
 %% SIMUALTION
 
-sysd_closedloop = ss(A-B*K,B,C,[],Ts);
+B_ref = [0 0 0;
+         0 0 0;
+         1 0 0;
+         0 0 0;
+         0 0 0;
+         0 0 0;
+         0 0 0;
+         0 0 0;
+         0 1 0;
+         0 0 0;
+         0 0 0;
+         0 0 0;
+         0 0 1;
+         0 0 0];
+
+sysd_closedloop = ss(A-B*K,B_ref,C,[],Ts);
+
+dcgain_cl = dcgain(sysd_closedloop);
+
+B_ref(3,1) = 1/dcgain_cl(3,1);
+B_ref(9,2) = 1/dcgain_cl(9,2);
+B_ref(13,3) = 1/dcgain_cl(13,3);
+
+sysd_closedloop_adjusted = ss(A-B*K,B_ref,C,[],Ts);
+
+dcgain(sysd_closedloop_adjusted)
 
 % [states_trajectory, time] = step(sysd_closedloop);
 
+%%
+
 T = 10;
 dt = Ts;
-u = [zeros(2,T/dt) [0;0]];
+u = 1*ones(3,((T/dt)+1));
 t = 0:dt:T;
-x0 = [0.05;0.05;0;0;0;0];
+x0 = [0.05 0 0 0 0 0 0.05 0 0 0 0 0 0 0];
 
-y = lsim(sysd_closedloop,u,t,x0);
+y = lsim(sysd_closedloop_adjusted,u,t,x0);
 
 states_trajectory = y;
 time = t;
@@ -104,31 +178,30 @@ time = t;
 % Simple 2D plots to quickly see the performance characteristics of each
 % decoupled controller
 
-% Show 5 States of x-direction control
-
+% Show 6 States of x-direction control
 show_x_horizontal_performance_plots = true;
 if show_x_horizontal_performance_plots
     figure(1);
     clf;
     subplot 511;
     stairs(time, states_trajectory(:,1), 'm-'); grid();
-    ylabel('$r_1$ [m]','interpreter','latex')
+    ylabel('$r_1$ [m]','interpreter','latex');
     
     subplot 512;
     stairs(time, states_trajectory(:,2), 'm-');  grid();
-    ylabel('$r_2$ [m/s]','interpreter','latex')
+    ylabel('$r_2$ [m/s]','interpreter','latex');
     
     subplot 513;
     stairs(time, states_trajectory(:,3), 'b-');  grid();
-    ylabel('$x_1$ [m]','interpreter','latex')
+    ylabel('$x_1$ [m]','interpreter','latex');
     
     subplot 514;
     stairs(time, states_trajectory(:,4), 'b-');  grid();
-    ylabel('$x_2$ [m/s]','interpreter','latex')
+    ylabel('$x_2$ [m/s]','interpreter','latex');
     
     subplot 515;
     stairs(time, states_trajectory(:,5), 'k-');  grid();
-    ylabel('$\beta$ [rad]','interpreter','latex')
+    ylabel('$\beta_1$ [rad]','interpreter','latex');
     
     xlabel('Time [s]');
 end
@@ -140,15 +213,15 @@ end
 show_3D_visualization = true;
 if show_3D_visualization 
     x =     states_trajectory(:,3);
-    y =     states_trajectory(:,3);
-    z =     2*ones(length(time),1);
+    y =     states_trajectory(:,9);
+    z =     states_trajectory(:,13);
 
     roll =  states_trajectory(:,5);
-    pitch = states_trajectory(:,5);
+    pitch = states_trajectory(:,11);
     yaw =   zeros(length(time),1);
     
     r =     states_trajectory(:,1);
-    s =     states_trajectory(:,1);
+    s =     states_trajectory(:,7);
 
     X =     [x,y,z,roll,pitch,yaw,r,s];
     visualize_quadrotor_trajectory(X);
