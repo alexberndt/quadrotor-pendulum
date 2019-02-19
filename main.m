@@ -4,19 +4,31 @@
 % and Raffaello D'Andrea 
 
 %% INITIALIZATION 
+clc
+clear
 
 % Constants
-g = 9.81;   % m/s^2
-L = 0.565;  % meters
+g = 9.81;       % m/s^2
+L = 0.565;      % meters (Length of pendulum to center of mass)
+l = 0.17;       % meters (Quadrotor center to rotor center)
+I_yy = 3.2e-3;  % kg m^2 (Quadrotor inertia around y-axis)
+I_xx = I_yy;
+I_zz = 5.5e-3;  % kg m^2 (Quadrotor inertia around z-axis) 
 
 % continuous-time state space matrices
-Ac = [0   1 0 0 0;
-     g/L 0 0 0 -g;
-     0   0 0 1 0;
-     0   0 0 0 g;
-     0   0 0 0 0];
+Ac = [0   1 0 0  0 0 ;
+     g/L  0 0 0 -g 0 ;
+     0    0 0 1  0 0 ;
+     0    0 0 0  g 0 ;
+     0    0 0 0  0 1 ;
+     0    0 0 0  0 0];
  
-Bc = [0;0;0;0;1];
+Bc = [0         0;
+      0         0;
+      0         0;  
+      0         0;  
+      0         0;
+      l/I_yy -l/I_yy];
 
 Cc = eye(size(Ac));
 % outputs we are interested are
@@ -33,22 +45,24 @@ sysc = ss(Ac,Bc,Cc,[]);
  
 %% CHECK CONTROLLABILITY OF CONTINUOUS TIME SYSTEM
  
-% ctrb(A,B)
-% 
-% % not controllable
-% % use Hautus test 
-% 
-% eigvals = eig(A);
-% 
-% for idx = 1:numel(eigvals)
-%  lambda = eigvals(idx);
-%  disp('Eigenvalue: ');
-%  disp(lambda)
-%  rk = rank([(eye(size(A))*lambda-A) B]);
-%  disp('rank: ');
-%  disp(rk);
-%  disp('----------------');
-% end
+Ctrb_rank = rank(ctrb(Ac,Bc));
+disp('Rank of controllability matrix');
+disp(Ctrb_rank);
+
+% not controllable
+% use Hautus test 
+
+eigvals = eig(Ac);
+
+for idx = 1:numel(eigvals)
+ lambda = eigvals(idx);
+ disp('Eigenvalue: ');
+ disp(lambda)
+ rk = rank([(eye(size(Ac))*lambda-Ac) Bc]);
+ disp('rank: ');
+ disp(rk);
+ disp('----------------');
+end
 
 %% DISCRETIZE SYSTEM
 
@@ -64,7 +78,7 @@ C = sysd.C;
 % we have three uncontrollable modes lambda = 0,0,0
 
 Q = eye(size(A));
-R = 0.1;
+R = 0.1*eye(length(B(1,:)));
 
 [K,S,e] = dlqr(A,B,Q,R,[]);
 
@@ -72,7 +86,18 @@ R = 0.1;
 
 sysd_closedloop = ss(A-B*K,B,C,[],Ts);
 
-[states_trajectory, time] = step(sysd_closedloop);
+% [states_trajectory, time] = step(sysd_closedloop);
+
+T = 10;
+dt = Ts;
+u = [zeros(2,T/dt) [0;0]];
+t = 0:dt:T;
+x0 = [0.05;0.05;0;0;0;0];
+
+y = lsim(sysd_closedloop,u,t,x0);
+
+states_trajectory = y;
+time = t;
 
 %% PLOT SIMULATION RESULTS
 % 

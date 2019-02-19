@@ -25,8 +25,8 @@ function visualize_quadrotor_trajectory(states_trajectory)
     [N,~] = size(X);
 
     % reference set point (center of plot)
-    x_r = -0.51;
-    y_r = -0.51;
+    x_r = 0;
+    y_r = 0;
     z_r = 2;
 
     % quadrotor frame and circle drawings
@@ -98,6 +98,7 @@ function visualize_quadrotor_trajectory(states_trajectory)
         % set axes
         axis(Ax);
         view(3);
+        % view([0 0]);
         
         set(gca,'box','on')
         drawnow        
