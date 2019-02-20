@@ -77,7 +77,7 @@ function visualize_quadrotor_trajectory(states_trajectory)
         Pv = ([0 0;0 0; 0 pl]) + X(j,1:3)';
         
         % plot coordinate reference
-        plot3( x_r,y_r,z_r,'r*');
+        plot3( x_r,y_r,z_r,'r.');
         hold on
         
         % plot quadrotor frame cross and circles
@@ -85,12 +85,12 @@ function visualize_quadrotor_trajectory(states_trajectory)
         plot3( R1(1,:),R1(2,:),R1(3,:),'r',R2(1,:),R2(2,:),R2(3,:),'b',R3(1,:),R3(2,:),R3(3,:),'b',R4(1,:),R4(2,:),R4(3,:),'b');
         
         % plot equilibrium equilibrium (verticle upwards)
-        plot3( Pv(1,:),Pv(2,:),Pv(3,:),'c');
-        plot3( Pv(1,2),Pv(2,2),Pv(3,2),'c*');
+        plot3( Pv(1,:),Pv(2,:),Pv(3,:),'k--');
+        % plot3( Pv(1,2),Pv(2,2),Pv(3,2),'k');
         
         % plot current pendulum position
         plot3( P1(1,:),P1(2,:),P1(3,:),'m');
-        plot3( P1(1,2),P1(2,2),P1(3,2),'m*');
+        plot3( P1(1,2),P1(2,2),P1(3,2),'m.');
         
         hold off
         grid();
