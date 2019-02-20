@@ -6,6 +6,7 @@
 %% INIT
 clc
 clear
+addpath('functions/');
 
 %% DEFINE CONSTANTS
 g = 9.81;       % m/s^2
@@ -55,8 +56,6 @@ plot_2D_plots(t, states_trajectory);
 % show 3D simulation
 X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
 visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]));
-
-%% 
 
 
 
