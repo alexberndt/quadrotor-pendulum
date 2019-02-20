@@ -38,19 +38,19 @@ sysd_cl = calc_lqr_system(A,B,C,K,h);
 
 %% SIMULATE CONTROLLER DESIGN
 T = 5;
-input_sequence = [0*ones(1,((T/h)+1));
-                  0*ones(1,((T/h)+1));
-                  0*ones(1,((T/h)+1));
-                  0*ones(1,((T/h)+1))];
-time = 0:h:T;
+u = [ 0*ones(1,((T/h)+1));
+      0*ones(1,((T/h)+1));
+      0*ones(1,((T/h)+1));
+      0*ones(1,((T/h)+1))];
+t = 0:h:T;
               
 % initial condition
 x0 = [0.02 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0];
-states_trajectory = lsim(sysd_cl,input_sequence,time,x0);
+states_trajectory = lsim(sysd_cl,u,t,x0);
 
 %% PLOT RESULTS
 % plot 2D results
-plot_2D_plots(time, states_trajectory);
+plot_2D_plots(t, states_trajectory);
 
 % show 3D simulation
 X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
