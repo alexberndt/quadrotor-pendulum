@@ -27,7 +27,7 @@ function visualize_quadrotor_trajectory(states_trajectory)
     % reference set point (center of plot)
     x_r = 0;
     y_r = 0;
-    z_r = 2;
+    z_r = 0;
 
     % quadrotor frame and circle drawings
     l =  0.34;   
@@ -43,7 +43,7 @@ function visualize_quadrotor_trajectory(states_trajectory)
     clf;
     
     % define plot axes limits
-    w = 5;
+    w = 1;
     Ax = [-w+x_r w+x_r -w+y_r w+y_r -w+z_r w+z_r];
 
     % loop through trajectory inputs
@@ -56,8 +56,8 @@ function visualize_quadrotor_trajectory(states_trajectory)
         
         r = X(j,7);
         s = X(j,8);
-        roll_rel = tan(r/pl);
-        pitch_rel = tan(s/pl);
+        roll_rel = tan(s/pl);       % roll in y-direction (around x-axis)
+        pitch_rel = tan(r/pl);      % pitch in x-direction (around y-axis)
         Rp = R([roll_rel, pitch_rel, 0]);
         
         % define each quadrotor circle
@@ -90,15 +90,16 @@ function visualize_quadrotor_trajectory(states_trajectory)
         
         % plot current pendulum position
         plot3( P1(1,:),P1(2,:),P1(3,:),'m');
-        plot3( P1(1,end),P1(2,end),P1(3,end),'m*');
+        plot3( P1(1,2),P1(2,2),P1(3,2),'m*');
         
         hold off
         grid();
         
         % set axes
         axis(Ax);
-        view(3);
-        view([0 0]);
+        % view(3);
+        % view([15 25]);
+        view([90 0]);
         
         set(gca,'box','on')
         drawnow        

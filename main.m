@@ -17,7 +17,7 @@ I_xx = I_yy;
 I_zz = 5.5e-3;  % kg m^2 (Quadrotor inertia around z-axis) 
 
 % SUBSYSTEM 1 - pitch angle dynamics (around y-axis)
-Ac1 = [   0   1 0 0  0 0 ;
+Ac1 = [  0    1 0 0  0 0 ;
          g/L  0 0 0 -g 0 ;
          0    0 0 1  0 0 ;
          0    0 0 0  g 0 ;
@@ -25,11 +25,11 @@ Ac1 = [   0   1 0 0  0 0 ;
          0    0 0 0  0 0 ];
  
 Bc1 = [0         0;
-      0         0;
-      0         0;  
-      0         0;  
-      0         0;
-      l/I_yy -l/I_yy];
+       0         0;
+       0         0;  
+       0         0;  
+       0         0;
+      -l/I_yy  l/I_yy];
 
 Cc1 = eye(size(Ac1));
 % outputs we are interested are
@@ -43,21 +43,21 @@ Cc1 = eye(size(Ac1));
 % - beta2:  pitch angle rate of quad (rotation angle around y-axis)
 
 % SUBSYSTEM 2 - pitch angle dynamics (around x-axis)
-Ac2 = [   0   1 0 0  0 0 ;
-         g/L  0 0 0 -g 0 ;
-         0    0 0 1  0 0 ;
-         0    0 0 0  g 0 ;
-         0    0 0 0  0 1 ;
-         0    0 0 0  0 0 ];
+Ac2 = [   0   1 0 0  0  0 ;
+         g/L  0 0 0 -g  0 ;
+         0    0 0 1  0  0 ;
+         0    0 0 0 -g  0 ;
+         0    0 0 0  0  1 ;
+         0    0 0 0  0  0 ];
  
 Bc2 = [0         0;
-      0         0;
-      0         0;  
-      0         0;  
-      0         0;
-      l/I_xx -l/I_xx];
+       0         0;
+       0         0;  
+       0         0;  
+       0         0;
+      -l/I_xx  l/I_xx];
 
-Cc2 = eye(size(Ac2));
+Cc2 = -eye(size(Ac2)); % negative to have positive y-direction
 % outputs we are interested are
 % - s1:     the displacement of 
 % - s2:     velocity of pendulum relative to quadrotor
@@ -113,7 +113,7 @@ disp(Ctrb_rank);
 
 %% DISCRETIZE SYSTEM
 
-Ts = 0.05;  % 10 ms sampling time
+Ts = 0.02;  % 10 ms sampling time
 sysd = c2d(sysc,Ts);
 
 A = sysd.A;
@@ -162,11 +162,16 @@ dcgain(sysd_closedloop_adjusted)
 
 %%
 
-T = 10;
+T = 5;
 dt = Ts;
 u = 1*ones(3,((T/dt)+1));
+
+u = [0*ones(1,((T/dt)+1));
+     0*ones(1,((T/dt)+1));
+     0*ones(1,((T/dt)+1))];
+
 t = 0:dt:T;
-x0 = [0.05 0 0 0 0 0 0.05 0 0 0 0 0 0 0];
+x0 = [0.0 0 0 0 0 0  0.05 0 0 0 0 0  0 0];
 
 y = lsim(sysd_closedloop_adjusted,u,t,x0);
 
@@ -183,25 +188,55 @@ show_x_horizontal_performance_plots = true;
 if show_x_horizontal_performance_plots
     figure(1);
     clf;
+    sgtitle('x-direction horizontal motion and pitch angles');
     subplot 511;
     stairs(time, states_trajectory(:,1), 'm-'); grid();
-    ylabel('$r_1$ [m]','interpreter','latex');
+    ylabel('$r$ [m]','interpreter','latex');
     
     subplot 512;
     stairs(time, states_trajectory(:,2), 'm-');  grid();
-    ylabel('$r_2$ [m/s]','interpreter','latex');
+    ylabel('$\dot{r}$ [m/s]','interpreter','latex');
     
     subplot 513;
     stairs(time, states_trajectory(:,3), 'b-');  grid();
-    ylabel('$x_1$ [m]','interpreter','latex');
+    ylabel('$x$ [m]','interpreter','latex');
     
     subplot 514;
     stairs(time, states_trajectory(:,4), 'b-');  grid();
-    ylabel('$x_2$ [m/s]','interpreter','latex');
+    ylabel('$\dot{x}$ [m/s]','interpreter','latex');
     
     subplot 515;
     stairs(time, states_trajectory(:,5), 'k-');  grid();
-    ylabel('$\beta_1$ [rad]','interpreter','latex');
+    ylabel('$\beta$ [rad]','interpreter','latex');
+    
+    xlabel('Time [s]');
+end
+
+% Show 6 States of x-direction control
+show_y_horizontal_performance_plots = true;
+if show_y_horizontal_performance_plots
+    figure(2);
+    clf;
+    sgtitle('y-direction horizontal motion and roll angles');
+    subplot 511;
+    stairs(time, states_trajectory(:,7), 'm-'); grid();
+    ylabel('$s$ [m]','interpreter','latex');
+    
+    subplot 512;
+    stairs(time, states_trajectory(:,8), 'm-');  grid();
+    ylabel('$\dot{s}$ [m/s]','interpreter','latex');
+    
+    subplot 513;
+    stairs(time, states_trajectory(:,9), 'b-');  grid();
+    ylabel('$y$ [m]','interpreter','latex');
+    
+    subplot 514;
+    stairs(time, states_trajectory(:,10), 'b-');  grid();
+    ylabel('$\dot{y}$ [m/s]','interpreter','latex');
+    
+    subplot 515;
+    stairs(time, states_trajectory(:,11), 'k-');  grid();
+    ylabel('$\gamma$ [rad]','interpreter','latex');
     
     xlabel('Time [s]');
 end
@@ -212,15 +247,15 @@ end
 
 show_3D_visualization = true;
 if show_3D_visualization 
-    x =     states_trajectory(:,3);
+    x =     0*states_trajectory(:,3);
     y =     states_trajectory(:,9);
-    z =     states_trajectory(:,13);
+    z =     0*states_trajectory(:,13);
 
-    roll =  states_trajectory(:,5);
-    pitch = states_trajectory(:,11);
+    pitch = 0*states_trajectory(:,5);
+    roll =  states_trajectory(:,11);
     yaw =   zeros(length(time),1);
     
-    r =     states_trajectory(:,1);
+    r =     0*states_trajectory(:,1);
     s =     states_trajectory(:,7);
 
     X =     [x,y,z,roll,pitch,yaw,r,s];
