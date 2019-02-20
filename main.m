@@ -77,13 +77,22 @@ Bc3 = [0   0   0   0   ;
    
 Cc3 = eye(size(Ac3));
 
+% SUBSYSTEM 4 - yaw angle of quadrotor
+Ac4 = [0 1;
+       0 0];
+Bc4 = [0        0         0       0   ;
+       -1/I_zz  -1/I_zz  1/I_zz 1/I_zz];
+Cc4 = eye(size(Ac4));
+
 % FULL SYSTEM CONCATENATION
-Ac = blkdiag(Ac1,Ac2,Ac3);
+Ac = blkdiag(Ac1,Ac2,Ac3,Ac4);
+
 Bc = [Bc1        zeros(6,2);
       zeros(6,2) Bc2;
-      Bc3            ];
+      Bc3 ;
+      Bc4 ];
   
-Cc = blkdiag(Cc1,Cc2,Cc3);
+Cc = blkdiag(Cc1,Cc2,Cc3,Cc4);
 
 % continuous-time state-space model
 sysc = ss(Ac,Bc,Cc,[]);
@@ -96,9 +105,9 @@ disp(size(Ac));
 disp('Rank of controllability matrix');
 disp(Ctrb_rank);
 
-% IF not controllable
-% use Hautus test 
-
+% % IF not controllable
+% % use Hautus test 
+% 
 % eigvals = eig(Ac);
 % 
 % for idx = 1:numel(eigvals)
@@ -131,20 +140,22 @@ R = 0.1*eye(length(B(1,:)));
 
 %% SIMUALTION
 
-B_ref = [0 0 0;
-         0 0 0;
-         1 0 0;
-         0 0 0;
-         0 0 0;
-         0 0 0;
-         0 0 0;
-         0 0 0;
-         0 1 0;
-         0 0 0;
-         0 0 0;
-         0 0 0;
-         0 0 1;
-         0 0 0];
+B_ref = [0 0 0 0;
+         0 0 0 0;
+         1 0 0 0;
+         0 0 0 0;
+         0 0 0 0;
+         0 0 0 0;
+         0 0 0 0;
+         0 0 0 0;
+         0 1 0 0;
+         0 0 0 0;
+         0 0 0 0;
+         0 0 0 0;
+         0 0 1 0;
+         0 0 0 0;
+         0 0 0 1;
+         0 0 0 0];
 
 sysd_closedloop = ss(A-B*K,B_ref,C,[],Ts);
 
@@ -153,6 +164,7 @@ dcgain_cl = dcgain(sysd_closedloop);
 B_ref(3,1) = 1/dcgain_cl(3,1);
 B_ref(9,2) = 1/dcgain_cl(9,2);
 B_ref(13,3) = 1/dcgain_cl(13,3);
+B_ref(15,4) = 1/dcgain_cl(15,4);
 
 sysd_closedloop_adjusted = ss(A-B*K,B_ref,C,[],Ts);
 
@@ -168,10 +180,12 @@ u = 1*ones(3,((T/dt)+1));
 
 u = [0*ones(1,((T/dt)+1));
      0*ones(1,((T/dt)+1));
+     0*ones(1,((T/dt)+1));
      0*ones(1,((T/dt)+1))];
 
 t = 0:dt:T;
-x0 = [0.0 0 0 0 0 0  0.05 0 0 0 0 0  0 0];
+% initial pendulum offset, quadrotor offset and quadrotor yaw angle
+x0 = [0.02 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0];
 
 y = lsim(sysd_closedloop_adjusted,u,t,x0);
 
@@ -247,15 +261,15 @@ end
 
 show_3D_visualization = true;
 if show_3D_visualization 
-    x =     0*states_trajectory(:,3);
+    x =     states_trajectory(:,3);
     y =     states_trajectory(:,9);
-    z =     0*states_trajectory(:,13);
+    z =     states_trajectory(:,13);
 
-    pitch = 0*states_trajectory(:,5);
+    pitch = states_trajectory(:,5);
     roll =  states_trajectory(:,11);
-    yaw =   zeros(length(time),1);
+    yaw =   states_trajectory(:,15);
     
-    r =     0*states_trajectory(:,1);
+    r =     states_trajectory(:,1);
     s =     states_trajectory(:,7);
 
     X =     [x,y,z,roll,pitch,yaw,r,s];

@@ -53,11 +53,11 @@ function visualize_quadrotor_trajectory(states_trajectory)
         Rt = R(X(j,4:6)); 
         
         % obtain rotational matrix for pendulum relative to quad
-        
         r = X(j,7);
         s = X(j,8);
         roll_rel = tan(s/pl);       % roll in y-direction (around x-axis)
         pitch_rel = tan(r/pl);      % pitch in x-direction (around y-axis)
+        % yaw_rel = X(j,6);
         Rp = R([roll_rel, pitch_rel, 0]);
         
         % define each quadrotor circle
@@ -97,9 +97,9 @@ function visualize_quadrotor_trajectory(states_trajectory)
         
         % set axes
         axis(Ax);
-        % view(3);
+        view(3);
         % view([15 25]);
-        view([90 0]);
+        % view([0 90]);
         
         set(gca,'box','on')
         drawnow        
