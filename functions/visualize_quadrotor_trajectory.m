@@ -1,4 +1,4 @@
-function visualize_quadrotor_trajectory(states_trajectory)
+function visualize_quadrotor_trajectory(states_trajectory,pause_duration)
     %% VISUALIZE QUADROTOR TRAJECTORY
     %
     % plots the dynamics of the quadrotor with inverted pendulum given the 
@@ -19,6 +19,9 @@ function visualize_quadrotor_trajectory(states_trajectory)
     % - none 
     
     %% INIT
+    if (nargin == 1)
+        pause_duration = 0;
+    end
     
     % X is the 6-states of the quadrotor, 2-states of pendulum
     X = states_trajectory(:,1:8);
@@ -102,7 +105,10 @@ function visualize_quadrotor_trajectory(states_trajectory)
         % view([0 90]);
         
         set(gca,'box','on')
-        drawnow        
+        drawnow   
+        if (pause_duration > 0) 
+            pause(pause_duration);
+        end
     end
     
     % Function to determine the rotation matrix for plotting
