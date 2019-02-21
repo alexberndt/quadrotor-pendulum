@@ -30,24 +30,60 @@ B = sysd.B;
 C = sysd.C;
 
 %% LINEAR QUADRATIC REGULATOR
+
+% simulation time
+T = 3.5;
+x0 = [0.02 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0];
+
+% reference sequence
+r = [ 0*ones(1,((T/h)+1));
+      0*ones(1,((T/h)+1));
+      0.5*ones(1,((T/h)+1));
+      1.0*ones(1,((T/h)+1))];
+  
 Q = eye(size(A));
 R = 0.1*eye(length(B(1,:)));
 
-[K,S,e] = dlqr(A,B,Q,R,[]);
-% define closed_loop_system
-sysd_cl = calc_lqr_system(A,B,C,K,h);
+[K,S,e] = dlqr(A,B,Q,R,[]); 
 
-%% SIMULATE CONTROLLER DESIGN
-T = 5;
-u = [ 0*ones(1,((T/h)+1));
-      0*ones(1,((T/h)+1));
-      0*ones(1,((T/h)+1));
-      0*ones(1,((T/h)+1))];
-t = 0:h:T;
-              
-% initial condition
-x0 = [0.02 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0];
-states_trajectory = lsim(sysd_cl,u,t,x0);
+B_ref = zeros(16,4);
+B_ref(3,1) = 1;
+B_ref(9,2) = 1;
+B_ref(13,3) = 1;
+B_ref(15,4) = 1;
+
+% define closed loop system with LQR control law
+sysd_cl_unnormalized = ss(A-B*K,B_ref,C,[],h);
+
+% normalize closed-loop reference tracking gains 
+dcgain_cl = dcgain(sysd_cl_unnormalized);
+B_ref(3,1) = 1/dcgain_cl(3,1);
+B_ref(9,2) = 1/dcgain_cl(9,2);
+B_ref(13,3) = 1/dcgain_cl(13,3);
+B_ref(15,4) = 1/dcgain_cl(15,4);
+
+
+N = T/h;
+x = zeros(length(A(:,1)),N);
+u = zeros(length(B(1,:)),N);
+y = zeros(length(C(:,1)),N);
+t = zeros(1,N);
+
+x(:,1) = x0';
+
+for k = 1:1:N
+    t(k) = (k-1)*h;
+    
+    % compute control action
+    u(:,k) = -K*x(:,k);   
+    
+    % apply control action
+    x(:,k+1) = A*x(:,k) + B*u(:,k) + B_ref*r(:,k);
+    y(:,k) = C*x(:,k);
+end
+
+% states_trajectory: Nx16 matrix of trajectory of 16 states
+states_trajectory = y';
 
 %% PLOT RESULTS
 % plot 2D results
