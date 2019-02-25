@@ -32,8 +32,8 @@ C = sysd.C;
 %% LINEAR QUADRATIC REGULATOR
 
 % simulation time
-T = 3.5;
-x0 = [0.02 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0];
+T = 5.5;
+x0 = [0.1 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0];
 
 % reference sequence
 r = [ 0*ones(1,((T/h)+1));

@@ -1,5 +1,8 @@
 ## TODO List
 
+Work needs to be done
+- reference tracking using V(x) = (x-x_ref)'Q(x-x_ref) + u'Ru instead of B_ref
+
 Issues to be considered/addressed:
 - Alternative control scenarios (e.g. constant velocity pendulum 
   equilibrium),

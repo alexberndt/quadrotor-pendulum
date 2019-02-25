@@ -17,7 +17,7 @@ function sysc = init_system_dynamics(g,m,L,l,I_xx,I_yy,I_zz)
 
     Cc1 = eye(size(Ac1));
 
-    % SUBSYSTEM 2 - pitch angle dynamics (around x-axis)
+    % SUBSYSTEM 2 - roll angle dynamics (around x-axis)
     Ac2 = [   0   1 0 0  0  0 ;     % - s1:     the displacement of
              g/L  0 0 0 -g  0 ;     % - s2:     velocity of pendulum relative to quadrotor
              0    0 0 1  0  0 ;     % - y1:     x-direction displacement of quadrotor relative to inertial coordinate frame O

@@ -31,45 +31,30 @@ C = sysd.C;
 
 %% MODEL PREDICTIVE CONTROL
 
-% simulation time
+% simulation time in seconds
 t_final = 8;
-x0 = [0.02 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0];
+T = t_final/h;
+% initial state
+x0 = [0.02 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0]';
 
-% reference sequence
-r = [ 0*ones(1,((t_final/h)+1));
-      0*ones(1,((t_final/h)+1));
-      0.5*ones(1,((t_final/h)+1));
-      1.0*ones(1,((t_final/h)+1))];
-  
-Q_lqr = eye(size(A));
-R_lqr = 0.1*eye(length(B(1,:)));
+% desired reference (x,y,z,yaw)
+r = [ones(1,T);     % x reference
+     ones(1,T);     % y reference
+     ones(1,T);     % z reference
+     ones(1,T)];    % yaw reference
 
-[K,~,~] = dlqr(A,B,Q_lqr,R_lqr,[]); 
-
+% B_ref relates reference to states x_ref = B_ref*r
 B_ref = zeros(16,4);
 B_ref(3,1) = 1;
-B_ref(9,2) = 1;
+B_ref(9,2) = -1;
 B_ref(13,3) = 1;
 B_ref(15,4) = 1;
 
-% define closed loop system with LQR control law
-sysd_cl_unnormalized = ss(A-B*K,B_ref,C,[],h);
+x = zeros(length(A(:,1)),T);    % state trajectory
+u = zeros(length(B(1,:)),T);    % control inputs
+y = zeros(length(C(:,1)),T);    % measurements 
+t = zeros(1,T);                 % time vector
 
-% normalize closed-loop reference tracking gains 
-dcgain_cl = dcgain(sysd_cl_unnormalized);
-B_ref(3,1) = 1/dcgain_cl(3,1);
-B_ref(9,2) = 1/dcgain_cl(9,2);
-B_ref(13,3) = 1/dcgain_cl(13,3);
-B_ref(15,4) = 1/dcgain_cl(15,4);
-
-
-T = t_final/h;
-x = zeros(length(A(:,1)),T);
-u = zeros(length(B(1,:)),T);
-y = zeros(length(C(:,1)),T);
-t = zeros(1,T);
-
-x0 = x0';
 x(:,1) = x0';
 
 % Define MPC Control Problem
@@ -111,10 +96,12 @@ d = (x0'*P'*Qbar*Z + 2*x0'*(A^N)'*Sbar*W)';
 for k = 1:1:T
     t(k) = (k-1)*h;
     
-    % compute control action
-    x0 = x(:,k);
+    % determine reference states based on reference input r_ref
+    x_ref = B_ref*r(:,k);
+    x0 = x(:,k) - x_ref;
     d = (x0'*P'*Qbar*Z + 2*x0'*(A^N)'*Sbar*W)';
     
+    % compute control action
     cvx_begin quiet
         variable u_N(4*N)
         minimize ( (1/2)*quad_form(u_N,H) + d'*u_N )
@@ -123,8 +110,6 @@ for k = 1:1:T
     cvx_end
     
     u(:,k) = u_N(1:4); % MPC control action
-    
-    % u(:,k) = -K*x(:,k); % LQR control action
     
     % apply control action
     x(:,k+1) = A*x(:,k) + B*u(:,k); % + B_ref*r(:,k);
@@ -136,7 +121,7 @@ states_trajectory = y';
 
 %% PLOT RESULTS
 % plot 2D results
-% plot_2D_plots(t, states_trajectory);
+plot_2D_plots(t, states_trajectory);
 
 % show 3D simulation
 X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
