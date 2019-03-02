@@ -35,13 +35,13 @@ C = sysd.C;
 t_final = 8;
 T = t_final/h;
 % initial state
-x0 = [0.02 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0]';
+x0 = [0.05 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0]';
 
 % desired reference (x,y,z,yaw)
-r = [ones(1,T);     % x reference
-     ones(1,T);     % y reference
-     ones(1,T);     % z reference
-     ones(1,T)];    % yaw reference
+r = [zeros(1,T);     % x reference
+     zeros(1,T);     % y reference
+     zeros(1,T);     % z reference
+     zeros(1,T)];    % yaw reference
 
 % B_ref relates reference to states x_ref = B_ref*r
 B_ref = zeros(16,4);
@@ -121,7 +121,7 @@ states_trajectory = y';
 
 %% PLOT RESULTS
 % plot 2D results
-plot_2D_plots(t, states_trajectory);
+% plot_2D_plots(t, states_trajectory);
 
 % show 3D simulation
 X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
