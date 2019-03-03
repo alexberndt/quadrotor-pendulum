@@ -121,7 +121,7 @@ function visualize_quadrotor_trajectory_rotating(states_trajectory,pause_duratio
         axis(Ax);
         view(3);
         % view([15 25]);
-        % view([0 0]);
+        view([0 0]);
         
         set(gca,'box','on')
         drawnow   

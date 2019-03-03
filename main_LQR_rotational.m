@@ -23,12 +23,13 @@ R_radius = 2;          % meters (radius of turn)
 Omega = 1;      % rad/s (rotational velocity)
 
 % equilibrium constants
-zeta_0 = 0.5;   % TODO - CANNOT FIND IN PAPER 
 q_0 = 0;
+zeta_0 = 0.5;   % initial zeta_0 estimate 
+% zeta_0 = sqrt(L^2-q_0^2-p_0^2); % zeta = relative position of pendulum along z-axis (Eqn 8)
 p_0 = -(Omega^2*R_radius)/(Omega^2+g/zeta_0);
+zeta_0 = sqrt(L^2-q_0^2-p_0^2); % correct
 
 z_0 = Inf; % NOT USED - constant reference altitude
-
 
 u_0 = R_radius;
 v_0 = 0;
@@ -113,41 +114,22 @@ A_cl_lqr = Ad+Bd*K;
 
 sysd_cl = ss(A_cl_lqr,Bd,Cd,[],h);
 
-N = 5/h; % 5 second simulation
+N = 20/h; % 5 second simulation
 
 x = zeros(12,N+1); 
 u = zeros(3, N+1);
 y = zeros(12, N);
 t = zeros(1,N+1);
+%         p1  p2  q1 q2  u1 u2  v1 v2  w1 w2   mu   nu 
+x(:,1) = [0.2  0  0  0   0  0   0  0   0  0   0.20  0.2 ]';
 
-x(:,1) = [0.2 0  0 0  0 0  0 0  0 0  0 0]';
+Bd_ref = Bd;
+dcgain_ref = dcgain(ss(Ad-Bd*K,Bd_ref,eye(12),[],h));
 
-for k = 1:N
-    t(:,k+1) = k*h;
-    u(:,k) = K*x(:,k);
-    x(:,k+1) = Ad*x(:,k) - Bd*u(:,k);
-    y(:,k) = Cd*x(:,k);
-end
+ref = zeros(3,N);
 
-u_tilde = x(5,:);
-v_tilde = x(7,:);
-w_tilde = x(9,:);
-
-u_actual = u_tilde + u_0;
-
-p_tilde = x(1,:);
-q_tilde = x(3,:);
-
-p_actual = p_tilde + p_0;
-q_actual = q_tilde + q_0;
-
-mu_tilde = x(11,:);
-nu_tilde = x(12,:);
-
-mu_actual = mu_tilde + mu_0;
-nu_actual = nu_tilde + nu_0;
-
-%% CONVERT TO CARTESIAN COORDINATES
+x_ref = zeros(12,N);
+% x_ref(9,N/2:N) = -0.0640*ones(1,(N/2)+1); % step in z-direction
 
 states_cart = zeros(3,N+1);
 states_pendulum = zeros(2,N+1);
@@ -155,7 +137,53 @@ states_pendulum_actual = zeros(2,N+1);
 euler_angles = zeros(2,N+1);
 yaw_angle = zeros(1,N+1);
 
+beta_angle = zeros(1,N+1);
+gamma_angle = zeros(1,N+1);
+beta_dot_angle = zeros(1,N+1);
+gamma_dot_angle = zeros(1,N+1);
+
+u_tilde = zeros(1,N+1);
+v_tilde = zeros(1,N+1);
+w_tilde = zeros(1,N+1);
+
+u_actual = zeros(1,N+1);
+
+p_tilde = zeros(1,N+1);
+q_tilde = zeros(1,N+1);
+
+p_actual = zeros(1,N+1);
+q_actual = zeros(1,N+1);
+
+mu_tilde = zeros(1,N+1);
+nu_tilde = zeros(1,N+1);
+
+mu_actual = zeros(1,N+1);
+nu_actual = zeros(1,N+1);
+
 for k = 1:N
+    t(:,k+1) = k*h;
+    u(:,k) = - K*(x(:,k) - x_ref(:,k));
+    x(:,k+1) = Ad*(x(:,k) - x_ref(:,k)) + Bd*u(:,k);
+    y(:,k) = Cd*(x(:,k) - x_ref(:,k));
+
+    u_tilde(k) = x(5,k);
+    v_tilde(k) = x(7,k);
+    w_tilde(k) = x(9,k);
+
+    u_actual(k) = u_tilde(k) + u_0;
+
+    p_tilde(k) = x(1,k);
+    q_tilde(k) = x(3,k);
+
+    p_actual(k) = p_tilde(k) + p_0;
+    q_actual(k) = q_tilde(k) + q_0;
+
+    mu_tilde(k) = x(11,k);
+    nu_tilde(k) = x(12,k);
+
+    mu_actual(k) = mu_tilde(k) + mu_0;
+    nu_actual(k) = nu_tilde(k) + nu_0;
+
     OmegaT = Omega*t(k);
     R_uvw_to_xyz = [cos(OmegaT) -sin(OmegaT) 0;
                     sin(OmegaT)  cos(OmegaT) 0;
@@ -175,7 +203,36 @@ for k = 1:N
     states_pendulum(:,k) = R_pq_to_rs*[p_actual(k); q_actual(k)]; 
     
     states_pendulum_actual(:,k) = states_pendulum(:,k) + states_cart(1:2,k);
+    
+    % calculate control input in terms of omega_x,y,z
+    mu = mu_actual(k);
+    nu = nu_actual(k);
+    
+    gamma = -asin(sin(OmegaT)*sin(mu)*cos(nu) - cos(OmegaT)*sin(nu));
+    beta = asin((cos(OmegaT)*sin(mu)*cos(nu) + sin(OmegaT)*sin(nu))/(cos(gamma)));
+    
+    beta_angle(k) = beta;
+    gamma_angle(k) = gamma;
+    
+    beta_dot_angle(k) = (R_radius*Omega^3*acos(gamma)*(tan(beta)*tan(gamma)*cos(OmegaT) + acos(beta)*sin(OmegaT)))/sqrt(g^2+(R_radius*Omega^2)^2);
+    gamma_dot_angle(k) = (R_radius*Omega^3*acos(gamma)*cos(OmegaT))/sqrt(g^2+(R_radius*Omega^2)^2);
 end
+
+figure(6);
+clf;
+stairs(t,beta_dot_angle);
+hold on
+stairs(t,gamma_dot_angle);
+legend('beta dot','gamma dot');
+grid();
+
+figure(7);
+clf;
+stairs(t,beta_angle);
+hold on
+stairs(t,gamma_angle);
+legend('beta','gamma');
+grid();
 
 figure(5);
 clf;
@@ -281,9 +338,25 @@ if shouldplot
     ylabel('$a$','interpreter','latex');
     xlabel('Time [s]');
 end
+    
+
+function Rt = R_x(y)
+   Rt = [1   0      0    ;
+         0 cos(y) -sin(y);
+         0 sin(y)  cos(y)];
+end
+
+function Rt = R_y(y)
+    Rt = [cos(y) 0  sin(y)    ;
+            0    1    0;
+         -sin(y) 0  cos(y)];
+end
      
-     
-     
+function Rt = R_z(y)
+    Rt = [cos(y) -sin(y) 0;
+          sin(y)  cos(y) 0;
+            0       0    1];
+end
      
      
      
