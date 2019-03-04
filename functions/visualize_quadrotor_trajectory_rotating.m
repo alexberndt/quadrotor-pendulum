@@ -24,22 +24,18 @@ function visualize_quadrotor_trajectory_rotating(states_trajectory,pause_duratio
     end
     
     % X is the 6-states of the quadrotor, 2-states of pendulum
-    
     x = states_trajectory(:,1);
     y = states_trajectory(:,2);
     z = states_trajectory(:,3);
-    
     
     roll = states_trajectory(:,4);
     pitch = states_trajectory(:,5);
     yaw = states_trajectory(:,6);
     
-    r = states_trajectory(:,7);
-    s = -states_trajectory(:,8);
+    r_pendulum = states_trajectory(:,7);
+    s_pendulum = -states_trajectory(:,8);
     
-    X = [x y z roll pitch yaw r s];
-    
-    
+    X = [x y z roll pitch yaw r_pendulum s_pendulum];
     
     [N,~] = size(X);
 
@@ -69,7 +65,7 @@ function visualize_quadrotor_trajectory_rotating(states_trajectory,pause_duratio
     Ax = [-w+x_r w+x_r+ic_buf -w+y_r w+y_r+ic_buf -wz+z_r wz+z_r];
 
     % loop through trajectory inputs
-    for j = 1:N
+    for j = [1:N-1 1]
 
         % obtain rotational matrix for current RPY angles
         Rt = R(X(j,4:6)); 
@@ -129,6 +125,13 @@ function visualize_quadrotor_trajectory_rotating(states_trajectory,pause_duratio
             pause(pause_duration);
         end
     end
+    
+    % plot the trajectory at the end
+    figure(42);
+    hold on
+    plot3(x,y,z,'.k');
+    plot3(x+r_pendulum,y-s_pendulum,z,'.m');
+    grid on
     
     % Function to determine the rotation matrix for plotting
     function y = R(Xrot)

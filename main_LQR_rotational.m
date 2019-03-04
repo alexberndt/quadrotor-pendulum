@@ -114,7 +114,7 @@ A_cl_lqr = Ad+Bd*K;
 
 sysd_cl = ss(A_cl_lqr,Bd,Cd,[],h);
 
-N = 20/h; % 5 second simulation
+N = 10/h; % 10 second simulation
 
 x = zeros(12,N+1); 
 u = zeros(3, N+1);
@@ -266,7 +266,7 @@ visualize_quadrotor_trajectory_rotating(states_trajectory);
      
 %% PLOT RESULTS
 
-shouldplot = true;
+shouldplot = false;
 if shouldplot
     % STATES 1-5
     figure(1);
