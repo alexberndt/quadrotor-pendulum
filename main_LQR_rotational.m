@@ -162,10 +162,11 @@ nu_actual = zeros(1,N+1);
 
 for k = 1:N
     t(:,k+1) = k*h;
+    
+    % Determine control action    
     u(:,k) = - K*(x(:,k) - x_ref(:,k));
-    x(:,k+1) = Ad*(x(:,k) - x_ref(:,k)) + Bd*u(:,k);
-    y(:,k) = Cd*(x(:,k) - x_ref(:,k));
-
+    
+    % Save variables
     u_tilde(k) = x(5,k);
     v_tilde(k) = x(7,k);
     w_tilde(k) = x(9,k);
@@ -185,29 +186,34 @@ for k = 1:N
     nu_actual(k) = nu_tilde(k) + nu_0;
 
     OmegaT = Omega*t(k);
+    
     R_uvw_to_xyz = [cos(OmegaT) -sin(OmegaT) 0;
                     sin(OmegaT)  cos(OmegaT) 0;
-                     0             0         1];  
+                     0             0         1];
+                 
+    % determine x,y,z states of quadrotor
     states_cart(:,k) = R_uvw_to_xyz*[u_actual(k); v_tilde(k); w_tilde(k)];
     
     R_pq_to_rs = [cos(OmegaT)  -sin(OmegaT);
-                  sin(OmegaT)  cos(OmegaT)];
+                  sin(OmegaT)  cos(OmegaT)];  
+    R_euler = R_pq_to_rs;          
               
-    R_euler = [cos(OmegaT)  -sin(OmegaT);
-               sin(OmegaT)  cos(OmegaT)];          
-              
+    % determine 
     euler_angles(:,k) = R_euler*[nu_actual(k); mu_actual(k)];
     
     yaw_angle(k) = 0;
               
+    % determine r,s states of pendulum (relative to quadrotor center)
     states_pendulum(:,k) = R_pq_to_rs*[p_actual(k); q_actual(k)]; 
     
+    % determine absolute pendulum position 
     states_pendulum_actual(:,k) = states_pendulum(:,k) + states_cart(1:2,k);
     
     % calculate control input in terms of omega_x,y,z
     mu = mu_actual(k);
     nu = nu_actual(k);
     
+    % determine gamma, beta angles of quadrotor
     gamma = -asin(sin(OmegaT)*sin(mu)*cos(nu) - cos(OmegaT)*sin(nu));
     beta = asin((cos(OmegaT)*sin(mu)*cos(nu) + sin(OmegaT)*sin(nu))/(cos(gamma)));
     
@@ -216,6 +222,10 @@ for k = 1:N
     
     beta_dot_angle(k) = (R_radius*Omega^3*acos(gamma)*(tan(beta)*tan(gamma)*cos(OmegaT) + acos(beta)*sin(OmegaT)))/sqrt(g^2+(R_radius*Omega^2)^2);
     gamma_dot_angle(k) = (R_radius*Omega^3*acos(gamma)*cos(OmegaT))/sqrt(g^2+(R_radius*Omega^2)^2);
+    
+    % Apply control and update state equations
+    x(:,k+1) = Ad*(x(:,k) - x_ref(:,k)) + Bd*u(:,k);
+    y(:,k) = Cd*(x(:,k) - x_ref(:,k));
 end
 
 figure(6);

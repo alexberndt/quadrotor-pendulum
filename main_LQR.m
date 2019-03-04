@@ -33,11 +33,12 @@ C = sysd.C;
 
 % simulation time
 T = 5.5;
-x0 = [0.1 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0];
+%                      x      y     z    roll pitch       yaw
+x0 = [0.1 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0  0.3           0  0 ];
 
 % reference sequence
-r = [ 0*ones(1,((T/h)+1));
-      0*ones(1,((T/h)+1));
+r = [ 2.0*ones(1,((T/h)+1));
+      -6.0*ones(1,((T/h)+1));
       0.5*ones(1,((T/h)+1));
       1.0*ones(1,((T/h)+1))];
   
