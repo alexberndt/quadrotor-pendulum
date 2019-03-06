@@ -1,4 +1,4 @@
-function visualize_quadrotor_trajectory_rotating(states_trajectory,pause_duration)
+function visualize_quadrotor_trajectory_rotating(states_trajectory,reference_trajectory,pause_duration)
     %% VISUALIZE QUADROTOR TRAJECTORY
     %
     % plots the dynamics of the quadrotor with inverted pendulum given the 
@@ -19,7 +19,7 @@ function visualize_quadrotor_trajectory_rotating(states_trajectory,pause_duratio
     % - none 
     
     %% INIT
-    if (nargin == 1)
+    if (nargin == 2)
         pause_duration = 0;
     end
     
@@ -99,16 +99,16 @@ function visualize_quadrotor_trajectory_rotating(states_trajectory,pause_duratio
         hold on
         
         % plot quadrotor frame cross and circles
-        plot3( A1(1,:),A1(2,:),A1(3,:),'k',A2(1,:),A2(2,:),A2(3,:),'k');
-        plot3( R1(1,:),R1(2,:),R1(3,:),'r',R2(1,:),R2(2,:),R2(3,:),'b',R3(1,:),R3(2,:),R3(3,:),'b',R4(1,:),R4(2,:),R4(3,:),'b');
+        plot3( A1(1,:),A1(2,:),A1(3,:),'k',A2(1,:),A2(2,:),A2(3,:),'k','LineWidth',1.5);
+        plot3( R1(1,:),R1(2,:),R1(3,:),'r',R2(1,:),R2(2,:),R2(3,:),'b',R3(1,:),R3(2,:),R3(3,:),'b',R4(1,:),R4(2,:),R4(3,:),'b','LineWidth',1.5);
         
         % plot equilibrium equilibrium (verticle upwards)
         plot3( Pv(1,:),Pv(2,:),Pv(3,:),'k--');
         % plot3( Pv(1,2),Pv(2,2),Pv(3,2),'k');
         
         % plot current pendulum position
-        plot3( P1(1,:),P1(2,:),P1(3,:),'m');
-        plot3( P1(1,2),P1(2,2),P1(3,2),'m.');
+        plot3( P1(1,:),P1(2,:),P1(3,:),'m','LineWidth',1.5);
+        plot3( P1(1,2),P1(2,2),P1(3,2),'m.','MarkerSize',3);
         
         hold off
         grid();
@@ -129,8 +129,9 @@ function visualize_quadrotor_trajectory_rotating(states_trajectory,pause_duratio
     % plot the trajectory at the end
     figure(42);
     hold on
-    plot3(x,y,z,'.k');
-    plot3(x+r_pendulum,y-s_pendulum,z,'.m');
+    plot3(x,y,z,'.k','MarkerSize',0.2);
+    plot3(x+r_pendulum,y-s_pendulum,z,'-m','MarkerSize',0.2);
+    plot(reference_trajectory(1,:),reference_trajectory(2,:),'c-');
     grid on
     
     % Function to determine the rotation matrix for plotting

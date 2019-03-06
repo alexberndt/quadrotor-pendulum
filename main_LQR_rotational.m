@@ -19,117 +19,16 @@ I_yy = 3.2e-3;  % kg m^2 (Quadrotor inertia around y-axis)
 I_xx = I_yy;    
 I_zz = 5.5e-3;  % kg m^2 (Quadrotor inertia around z-axis)
 
-R_radius = 2;          % meters (radius of turn)
-Omega = 1;      % rad/s (rotational velocity)
+simTime = 20;    % 8 second simulation
+h = 0.05;       % sampling time
+N = simTime/h;        
 
-% equilibrium constants
-q_0 = 0;
-zeta_0 = 0.5;   % initial zeta_0 estimate 
-% zeta_0 = sqrt(L^2-q_0^2-p_0^2); % zeta = relative position of pendulum along z-axis (Eqn 8)
-p_0 = -(Omega^2*R_radius)/(Omega^2+g/zeta_0);
-zeta_0 = sqrt(L^2-q_0^2-p_0^2); % correct
+% define desired set point sequences in terms of Radius and Omega
+R_radius_sequence = 2*ones(1,N+1); % + 0.5*sin(0.02*(1:N+1));   % meters (radius of turn)
+Omega_sequence = 1*ones(1,N+1) + 0.0035*(1:N+1);      % rad/s (rotational velocity)
+OmegaAngle_prev = 0;
 
-z_0 = Inf; % NOT USED - constant reference altitude
-
-u_0 = R_radius;
-v_0 = 0;
-w_0 = 0;
-
-mu_0 = atan(-Omega^2*R_radius/g);        % nominal euler angle
-nu_0 = 0;                           % nominal euler angle
-a_0 = sqrt(g^2 + (R_radius*Omega^2)^2);    % nominal thrust
-
-%% DEFINE STATE SPACE SYSTEM
-
-% inputs 
-% - mu_dot
-% - nu_dot
-
-C1 = zeta_0^2/L^2;
-C2 = Omega^2 + g*L^2/(zeta_0^3);
-C3 = Omega;
-C4 = -(p_0/zeta_0)*a_0*sin(mu_0) - a_0*cos(mu_0);
-C5 = (p_0/zeta_0)*cos(mu_0) - sin(mu_0);
-
-C6 = Omega^2 + g/zeta_0;
-    
-%      p1  p2  q1  q2    u1  u2  v1   v2  w1  w2  mu            nu  
-Ac =[  0   1   0   0     0   0   0    0   0   0   0             0   ;  % p1
-     C1*C2 0   0 2*C1*C3 0   0   0    0   0   0 C1*C4           0   ;  % p2
-       0   0   0   1     0   0   0    0   0   0   0             0   ;  % q1
-       0 -2*C3 C6  0     0   0   0    0   0   0   0            a_0  ;  % q2
-       0   0   0   0     0   1   0    0   0   0   0             0   ;  % u1  
-       0   0   0   0   C3^2  0   0   2*C3 0   0 a_0*cos(mu_0)   0   ;  % u2
-       0   0   0   0     0   0   0    1   0   0   0             0   ;  % v1
-       0   0   0   0     0 -2*C3 C3^2 0   0   0   0           -a_0  ;  % v2
-       0   0   0   0     0   0   0    0   0   1   0             0   ;  % w1
-       0   0   0   0     0   0   0    0   0   0 -a_0*sin(mu_0)  0   ;  % w2
-       0   0   0   0     0   0   0    0   0   0   0             0   ;  % mu
-       0   0   0   0     0   0   0    0   0   0   0             0   ]; % nu     
-     
-%      mu_dot nu_dot a
-Bc =[  0      0      0;     % p1
-       0      0    C1*C5;   % p2
-       0      0      0;     % q1
-       0      0      0;     % q2
-       0      0      0;     % u1
-       0      0  sin(mu_0); % u2
-       0      0      0;     % v1
-       0      0      0;     % v2
-       0      0      0;     % w1
-       0      0  cos(mu_0); % w2
-       1      0      0;     % mu
-       0      1      0 ];   % nu     
-
-Cc = eye(12);
-
-     
-rank(ctrb(Ac,Bc))
-
-sysc = ss(Ac,Bc,Cc,[]);
-
-%% DISCRETIZE SYSTEM
-h = 0.05;
-sysd = c2d(sysc,h);
-
-Ad = sysd.A;
-Bd = sysd.B;
-Cd = sysd.C;
-   
-% Choose Q and R
-% only penalize position errors and control effort 
-
-R = 0.1*eye(3);
-
-Q = zeros(12,12);
-Q(5,5) = 1;
-Q(7,7) = 1;
-Q(9,9) = 1;
-
-[~,eigvals,K] = dare(Ad,Bd,Q,R);
-     
-% NB - check zeta_0 parameter -> has large effect on output size
-     
-A_cl_lqr = Ad+Bd*K;
-
-sysd_cl = ss(A_cl_lqr,Bd,Cd,[],h);
-
-N = 10/h; % 10 second simulation
-
-x = zeros(12,N+1); 
-u = zeros(3, N+1);
-y = zeros(12, N);
-t = zeros(1,N+1);
-%         p1  p2  q1 q2  u1 u2  v1 v2  w1 w2   mu   nu 
-x(:,1) = [0.2  0  0  0   0  0   0  0   0  0   0.20  0.2 ]';
-
-Bd_ref = Bd;
-dcgain_ref = dcgain(ss(Ad-Bd*K,Bd_ref,eye(12),[],h));
-
-ref = zeros(3,N);
-
-x_ref = zeros(12,N);
-% x_ref(9,N/2:N) = -0.0640*ones(1,(N/2)+1); % step in z-direction
+%% INITIALIZE VARIABLE SEQUENCES
 
 states_cart = zeros(3,N+1);
 states_pendulum = zeros(2,N+1);
@@ -141,6 +40,8 @@ beta_angle = zeros(1,N+1);
 gamma_angle = zeros(1,N+1);
 beta_dot_angle = zeros(1,N+1);
 gamma_dot_angle = zeros(1,N+1);
+
+reference_trajectory = zeros(2,N+1);
 
 u_tilde = zeros(1,N+1);
 v_tilde = zeros(1,N+1);
@@ -160,42 +61,66 @@ nu_tilde = zeros(1,N+1);
 mu_actual = zeros(1,N+1);
 nu_actual = zeros(1,N+1);
 
+x = zeros(12,N+1); 
+u = zeros(3, N+1);
+y = zeros(12, N);
+t = zeros(1,N+1);
+
+% define initial conditions
+%         p1  p2  q1 q2  u1 u2  v1 v2  w1 w2   mu   nu 
+x(:,1) = [0.2  0  0  0   0  0   0  0   0  0   0.20  0.2 ]';
+
+%% ITERATE THROUGH EACH TIME STEP
+
 for k = 1:N
     t(:,k+1) = k*h;
     
-    % Determine control action    
-    u(:,k) = - K*(x(:,k) - x_ref(:,k));
+    % Obtain new linearized system
+    Omega = Omega_sequence(k);
+    R_radius = R_radius_sequence(k);
+    
+    % get new linearized system matrices and Equilibrium nominal points
+    [Ad,Bd,Cd,EP] = linearized_ss(L,g,Omega,R_radius,h);
+    
+    % Define Q and R and determine optimal LQR gain based on new system matrices
+    R = 0.1*eye(3);                 
+    Q = zeros(12,12); Q(5,5) = 1; Q(7,7) = 1; Q(9,9) = 1;   % only penalize position errors
+    [~,eigvals,K] = dare(Ad,Bd,Q,R);
+    
+    % Determine control action from LQR   
+    u(:,k) = -K*x(:,k);
     
     % Save variables
     u_tilde(k) = x(5,k);
     v_tilde(k) = x(7,k);
     w_tilde(k) = x(9,k);
 
-    u_actual(k) = u_tilde(k) + u_0;
+    u_actual(k) = u_tilde(k) + EP.u_0;
 
     p_tilde(k) = x(1,k);
     q_tilde(k) = x(3,k);
 
-    p_actual(k) = p_tilde(k) + p_0;
-    q_actual(k) = q_tilde(k) + q_0;
+    p_actual(k) = p_tilde(k) + EP.p_0;
+    q_actual(k) = q_tilde(k) + EP.q_0;
 
     mu_tilde(k) = x(11,k);
     nu_tilde(k) = x(12,k);
 
-    mu_actual(k) = mu_tilde(k) + mu_0;
-    nu_actual(k) = nu_tilde(k) + nu_0;
+    mu_actual(k) = mu_tilde(k) + EP.mu_0;
+    nu_actual(k) = nu_tilde(k) + EP.nu_0;
 
-    OmegaT = Omega*t(k);
+    OmegaAngleT = OmegaAngle_prev + Omega*h;
+    OmegaAngle_prev = OmegaAngleT;
     
-    R_uvw_to_xyz = [cos(OmegaT) -sin(OmegaT) 0;
-                    sin(OmegaT)  cos(OmegaT) 0;
+    R_uvw_to_xyz = [cos(OmegaAngleT) -sin(OmegaAngleT) 0;
+                    sin(OmegaAngleT)  cos(OmegaAngleT) 0;
                      0             0         1];
                  
     % determine x,y,z states of quadrotor
     states_cart(:,k) = R_uvw_to_xyz*[u_actual(k); v_tilde(k); w_tilde(k)];
     
-    R_pq_to_rs = [cos(OmegaT)  -sin(OmegaT);
-                  sin(OmegaT)  cos(OmegaT)];  
+    R_pq_to_rs = [cos(OmegaAngleT)  -sin(OmegaAngleT);
+                  sin(OmegaAngleT)  cos(OmegaAngleT)];  
     R_euler = R_pq_to_rs;          
               
     % determine 
@@ -214,47 +139,24 @@ for k = 1:N
     nu = nu_actual(k);
     
     % determine gamma, beta angles of quadrotor
-    gamma = -asin(sin(OmegaT)*sin(mu)*cos(nu) - cos(OmegaT)*sin(nu));
-    beta = asin((cos(OmegaT)*sin(mu)*cos(nu) + sin(OmegaT)*sin(nu))/(cos(gamma)));
+    gamma = -asin(sin(OmegaAngleT)*sin(mu)*cos(nu) - cos(OmegaAngleT)*sin(nu));
+    beta = asin((cos(OmegaAngleT)*sin(mu)*cos(nu) + sin(OmegaAngleT)*sin(nu))/(cos(gamma)));
     
     beta_angle(k) = beta;
     gamma_angle(k) = gamma;
     
-    beta_dot_angle(k) = (R_radius*Omega^3*acos(gamma)*(tan(beta)*tan(gamma)*cos(OmegaT) + acos(beta)*sin(OmegaT)))/sqrt(g^2+(R_radius*Omega^2)^2);
-    gamma_dot_angle(k) = (R_radius*Omega^3*acos(gamma)*cos(OmegaT))/sqrt(g^2+(R_radius*Omega^2)^2);
+    beta_dot_angle(k) = (R_radius*Omega^3*acos(gamma)*(tan(beta)*tan(gamma)*cos(OmegaAngleT) + acos(beta)*sin(OmegaAngleT)))/sqrt(g^2+(R_radius*Omega^2)^2);
+    gamma_dot_angle(k) = (R_radius*Omega^3*acos(gamma)*cos(OmegaAngleT))/sqrt(g^2+(R_radius*Omega^2)^2);
+    
+    % determine reference input based on R_radius and Omega sequences
+    reference_trajectory(:,k) = [cos(OmegaAngleT); sin(OmegaAngleT)]*R_radius;
     
     % Apply control and update state equations
-    x(:,k+1) = Ad*(x(:,k) - x_ref(:,k)) + Bd*u(:,k);
-    y(:,k) = Cd*(x(:,k) - x_ref(:,k));
+    x(:,k+1) = Ad*x(:,k) + Bd*u(:,k);
+    y(:,k) = Cd*x(:,k);
 end
 
-figure(6);
-clf;
-stairs(t,beta_dot_angle);
-hold on
-stairs(t,gamma_dot_angle);
-legend('beta dot','gamma dot');
-grid();
-
-figure(7);
-clf;
-stairs(t,beta_angle);
-hold on
-stairs(t,gamma_angle);
-legend('beta','gamma');
-grid();
-
-figure(5);
-clf;
-plot3(states_cart(1,:),states_cart(2,:),states_cart(3,:),'.k');
-hold on
-plot3(states_pendulum_actual(1,:),states_pendulum_actual(2,:),states_cart(3,:),'.m');
-con = 4;
-xlim([-con*R_radius con*R_radius]);
-ylim([-con*R_radius con*R_radius]);
-zlim([-con*R_radius con*R_radius]);
-pbaspect([1 1 1])
-grid();
+%% PLOT 3D TRAJECTORY
 
 states_trajectory = [states_cart(1:3,:);
                      euler_angles(1,:);
@@ -262,7 +164,7 @@ states_trajectory = [states_cart(1:3,:);
                      yaw_angle;
                      states_pendulum(1:2,:)]';
 
-visualize_quadrotor_trajectory_rotating(states_trajectory);
+visualize_quadrotor_trajectory_rotating(states_trajectory, reference_trajectory);
      
 %% PLOT RESULTS
 
@@ -347,9 +249,28 @@ if shouldplot
     stairs(t, u(3,:), 'm-');  grid();
     ylabel('$a$','interpreter','latex');
     xlabel('Time [s]');
+    
+    % INPUTS FOR ROTOR THRUST
+    figure(5);
+    clf;
+    stairs(t,beta_dot_angle);
+    hold on
+    stairs(t,gamma_dot_angle);
+    legend('beta dot','gamma dot');
+    title('Derivative of Control Inputs Seen By Quadrotor Props');
+    grid();
+
+    figure(6);
+    clf;
+    stairs(t,beta_angle);
+    hold on
+    stairs(t,gamma_angle);
+    legend('beta','gamma');
+    title('Control Inputs Seen By Quadrotor Props');
+    grid();
 end
     
-
+%% FUNCTIONS
 function Rt = R_x(y)
    Rt = [1   0      0    ;
          0 cos(y) -sin(y);
@@ -368,7 +289,88 @@ function Rt = R_z(y)
             0       0    1];
 end
      
-     
+function [Ad,Bd,Cd,EP] = linearized_ss(L,g,Omega,R_radius,h)
+
+    % equilibrium constants
+    q_0 = 0;
+    zeta_0 = 0.5;   % initial zeta_0 estimate 
+    % zeta_0 = sqrt(L^2-q_0^2-p_0^2); % zeta = relative position of pendulum along z-axis (Eqn 8)
+    p_0 = -(Omega^2*R_radius)/(Omega^2+g/zeta_0);
+    zeta_0 = sqrt(L^2-q_0^2-p_0^2); % correct
+
+    z_0 = Inf; % NOT USED - constant reference altitude
+
+    u_0 = R_radius;
+    v_0 = 0;
+    w_0 = 0;
+
+    mu_0 = atan(-Omega^2*R_radius/g);        % nominal euler angle
+    nu_0 = 0;                           % nominal euler angle
+    a_0 = sqrt(g^2 + (R_radius*Omega^2)^2);    % nominal thrust
+
+    C1 = zeta_0^2/L^2;
+    C2 = Omega^2 + g*L^2/(zeta_0^3);
+    C3 = Omega;
+    C4 = -(p_0/zeta_0)*a_0*sin(mu_0) - a_0*cos(mu_0);
+    C5 = (p_0/zeta_0)*cos(mu_0) - sin(mu_0);
+
+    C6 = Omega^2 + g/zeta_0;
+
+    %      p1  p2  q1  q2    u1  u2  v1   v2  w1  w2  mu            nu  
+    Ac =[  0   1   0   0     0   0   0    0   0   0   0             0   ;  % p1
+         C1*C2 0   0 2*C1*C3 0   0   0    0   0   0 C1*C4           0   ;  % p2
+           0   0   0   1     0   0   0    0   0   0   0             0   ;  % q1
+           0 -2*C3 C6  0     0   0   0    0   0   0   0            a_0  ;  % q2
+           0   0   0   0     0   1   0    0   0   0   0             0   ;  % u1  
+           0   0   0   0   C3^2  0   0   2*C3 0   0 a_0*cos(mu_0)   0   ;  % u2
+           0   0   0   0     0   0   0    1   0   0   0             0   ;  % v1
+           0   0   0   0     0 -2*C3 C3^2 0   0   0   0           -a_0  ;  % v2
+           0   0   0   0     0   0   0    0   0   1   0             0   ;  % w1
+           0   0   0   0     0   0   0    0   0   0 -a_0*sin(mu_0)  0   ;  % w2
+           0   0   0   0     0   0   0    0   0   0   0             0   ;  % mu
+           0   0   0   0     0   0   0    0   0   0   0             0   ]; % nu     
+
+    %      mu_dot nu_dot a
+    Bc =[  0      0      0;     % p1
+           0      0    C1*C5;   % p2
+           0      0      0;     % q1
+           0      0      0;     % q2
+           0      0      0;     % u1
+           0      0  sin(mu_0); % u2
+           0      0      0;     % v1
+           0      0      0;     % v2
+           0      0      0;     % w1
+           0      0  cos(mu_0); % w2
+           1      0      0;     % mu
+           0      1      0 ];   % nu     
+    
+    % full state feedback
+    Cc = eye(12);
+    
+    % descritize system
+    sysc = ss(Ac,Bc,Cc,[]);
+    
+    sysd = c2d(sysc,h);
+
+    Ad = sysd.A;
+    Bd = sysd.B;
+    Cd = sysd.C;
+    
+    % assign equilibrium parameters to struct
+    EP.a_0 = a_0;
+    EP.q_0 = q_0;
+    EP.p_0 = p_0;
+    EP.zeta_0 = zeta_0;
+    
+    EP.mu_0 = mu_0;
+    EP.nu_0 = nu_0;
+    
+    EP.u_0 = u_0;
+    EP.v_0 = v_0;
+    EP.w_0 = w_0;
+    
+    EP.z_0 = z_0;
+end
      
      
      
