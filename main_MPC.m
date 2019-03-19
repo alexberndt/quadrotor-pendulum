@@ -22,7 +22,7 @@ sysc = init_system_dynamics(g,m,L,l,I_xx,I_yy,I_zz);
 check_controllability(sysc);
 
 %% DISCRETIZE SYSTEM
-h = 0.2;
+h = 0.1;
 sysd = c2d(sysc,h);
 
 A = sysd.A;
@@ -65,28 +65,39 @@ x(:,1) = x0';
 %          k = 0
 
 % tuning weights
-Q = 10*eye(size(A));
-R = 0.1*eye(length(B(1,:)));
-S = 10*eye(size(A));
+Q = 10*eye(size(A));            % state cost
+R = 0.1*eye(length(B(1,:)));    % input cost
+S = 10*eye(size(A));            % terminal cost
 
 % prediction horizon
-N = 8; 
+N = 20; 
 
 Qbar = kron(Q,eye(N));
 Rbar = kron(R,eye(N));
 Sbar = S;
 
-P = [eye(size(A,1)); A; A^2; A^3; A^4; A^5; A^6; A^7];
-z = zeros(16,4);
-Z = [  z     z     z     z     z     z    z   z ;
-       B     z     z     z     z     z    z   z ;
-      A*B    B     z     z     z     z    z   z ;
-     A^2*B  A*B    B     z     z     z    z   z ;
-     A^3*B A^2*B  A*B    B     z     z    z   z ;
-     A^4*B A^3*B A^2*B  A*B    B     z    z   z ;
-     A^5*B A^4*B A^3*B A^2*B  A*B    B    z   z ; 
-     A^6*B A^5*B A^4*B A^3*B A^2*B  A*B   B   z ];
-W = [A^7*B A^6*B A^5*B A^4*B A^3*B A^2*B  A*B   B];
+LTI.A = A;
+LTI.B = B;
+LTI.C = C;
+
+dim.N = N;
+dim.nx = size(A,1);
+dim.nu = size(B,2);
+dim.ny = size(C,1);
+
+[P,Z,W] = predmodgen(LTI,dim);
+
+% P = [eye(size(A,1)); A; A^2; A^3; A^4; A^5; A^6; A^7];
+% z = zeros(16,4);
+% Z = [  z     z     z     z     z     z    z   z ;
+%        B     z     z     z     z     z    z   z ;
+%       A*B    B     z     z     z     z    z   z ;
+%      A^2*B  A*B    B     z     z     z    z   z ;
+%      A^3*B A^2*B  A*B    B     z     z    z   z ;
+%      A^4*B A^3*B A^2*B  A*B    B     z    z   z ;
+%      A^5*B A^4*B A^3*B A^2*B  A*B    B    z   z ; 
+%      A^6*B A^5*B A^4*B A^3*B A^2*B  A*B   B   z ];
+% W = [A^7*B A^6*B A^5*B A^4*B A^3*B A^2*B  A*B   B];
               
 H = (Z'*Qbar*Z + Rbar + 2*W'*Sbar*W);
 d = (x0'*P'*Qbar*Z + 2*x0'*(A^N)'*Sbar*W)';

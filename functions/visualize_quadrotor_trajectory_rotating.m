@@ -54,7 +54,8 @@ function visualize_quadrotor_trajectory_rotating(states_trajectory,reference_tra
     ry = [ry ry(1)];
     
     % init figure
-    figure(42);
+    gca42 = figure(42);
+    set(gca42,'color','w');
     clf;
     
     % define plot axes limits
