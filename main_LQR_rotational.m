@@ -168,7 +168,7 @@ visualize_quadrotor_trajectory_rotating(states_trajectory, reference_trajectory)
      
 %% PLOT RESULTS
 
-shouldplot = false;
+shouldplot = true;
 if shouldplot
     % STATES 1-5
     figure(1);

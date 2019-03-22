@@ -32,7 +32,7 @@ C = sysd.C;
 %% MODEL PREDICTIVE CONTROL
 
 % simulation time in seconds
-t_final = 8;
+t_final = 4;
 T = t_final/h;
 % initial state
 x0 = [0.05 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0]';
@@ -70,7 +70,7 @@ R = 0.1*eye(length(B(1,:)));    % input cost
 S = 10*eye(size(A));            % terminal cost
 
 % prediction horizon
-N = 20; 
+N = 18; 
 
 Qbar = kron(Q,eye(N));
 Rbar = kron(R,eye(N));
@@ -104,6 +104,8 @@ d = (x0'*P'*Qbar*Z + 2*x0'*(A^N)'*Sbar*W)';
  
 %%
 
+u_limit = 0.1;
+
 for k = 1:1:T
     t(k) = (k-1)*h;
     
@@ -116,8 +118,8 @@ for k = 1:1:T
     cvx_begin quiet
         variable u_N(4*N)
         minimize ( (1/2)*quad_form(u_N,H) + d'*u_N )
-        u_N >= -1000;
-        u_N <=  1000;
+        u_N >= -u_limit*ones(4*N,1);
+        u_N <=  u_limit*ones(4*N,1);
     cvx_end
     
     u(:,k) = u_N(1:4); % MPC control action
@@ -131,9 +133,14 @@ end
 states_trajectory = y';
 
 %% PLOT RESULTS
-% plot 2D results
-% plot_2D_plots(t, states_trajectory);
 
 % show 3D simulation
 X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
 visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]),0.1);
+
+%% Basic Plots
+% plot 2D results fo state trajectories
+% plot_2D_plots(t, states_trajectory);
+
+% plot the inputs
+plot_inputs(t,u,u_limit);
