@@ -22,8 +22,13 @@ sysc = init_system_dynamics(g,m,L,l,I_xx,I_yy,I_zz);
 check_controllability(sysc);
 
 %% DISCRETIZE SYSTEM
+
+% simulation time in seconds
+simeTime = 4;
 h = 0.1;
+
 sysd = c2d(sysc,h);
+T = simeTime/h;
 
 A = sysd.A;
 B = sysd.B;
@@ -31,9 +36,6 @@ C = sysd.C;
 
 %% MODEL PREDICTIVE CONTROL
 
-% simulation time in seconds
-t_final = 4;
-T = t_final/h;
 % initial state
 x0 = [0.05 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0]';
 
@@ -55,6 +57,9 @@ u = zeros(length(B(1,:)),T);    % control inputs
 y = zeros(length(C(:,1)),T);    % measurements 
 t = zeros(1,T);                 % time vector
 
+Vf = zeros(1,T);                % terminal cost sequence
+l = zeros(1,T);                 % stage cost sequence
+
 x(:,1) = x0';
 
 % Define MPC Control Problem
@@ -67,7 +72,9 @@ x(:,1) = x0';
 % tuning weights
 Q = 10*eye(size(A));            % state cost
 R = 0.1*eye(length(B(1,:)));    % input cost
-S = 10*eye(size(A));            % terminal cost
+
+% terminal cost = unconstrained optimal cost (Lec 5 pg 6)
+[S,~,~] = dare(A,B,Q,R);        % terminal cost % OLD: S = 10*eye(size(A));
 
 % prediction horizon
 N = 18; 
@@ -86,18 +93,6 @@ dim.nu = size(B,2);
 dim.ny = size(C,1);
 
 [P,Z,W] = predmodgen(LTI,dim);
-
-% P = [eye(size(A,1)); A; A^2; A^3; A^4; A^5; A^6; A^7];
-% z = zeros(16,4);
-% Z = [  z     z     z     z     z     z    z   z ;
-%        B     z     z     z     z     z    z   z ;
-%       A*B    B     z     z     z     z    z   z ;
-%      A^2*B  A*B    B     z     z     z    z   z ;
-%      A^3*B A^2*B  A*B    B     z     z    z   z ;
-%      A^4*B A^3*B A^2*B  A*B    B     z    z   z ;
-%      A^5*B A^4*B A^3*B A^2*B  A*B    B    z   z ; 
-%      A^6*B A^5*B A^4*B A^3*B A^2*B  A*B   B   z ];
-% W = [A^7*B A^6*B A^5*B A^4*B A^3*B A^2*B  A*B   B];
               
 H = (Z'*Qbar*Z + Rbar + 2*W'*Sbar*W);
 d = (x0'*P'*Qbar*Z + 2*x0'*(A^N)'*Sbar*W)';
@@ -109,7 +104,7 @@ u_limit = 0.1;
 for k = 1:1:T
     t(k) = (k-1)*h;
     
-    % determine reference states based on reference input r_ref
+    % determine reference states based on reference input r
     x_ref = B_ref*r(:,k);
     x0 = x(:,k) - x_ref;
     d = (x0'*P'*Qbar*Z + 2*x0'*(A^N)'*Sbar*W)';
@@ -127,12 +122,45 @@ for k = 1:1:T
     % apply control action
     x(:,k+1) = A*x(:,k) + B*u(:,k); % + B_ref*r(:,k);
     y(:,k) = C*x(:,k);
+    
+    % stability analysis
+%     Q = 10*eye(16);
+%     R = 0.1*eye(4);
+    
+    [X,eigvals,K] = dare(A,B,Q,R);
+    Vf(k) = 0.5*x(:,k)'*X*x(:,k);
+    l(k) = 0.5*x(:,k)'*Q*x(:,k);
 end
 
 % states_trajectory: Nx16 matrix of trajectory of 16 states
 states_trajectory = y';
 
 %% PLOT RESULTS
+
+% Stability plots
+Vf_diff = Vf(2:end)-Vf(1:end-1);
+
+Vfkp1 = Vf(2:end);
+Vfk = Vf(1:end-1);
+
+lQ = l(2:end);
+% lQ = l(1:end-1);
+
+kt = t(1:end-1);
+
+figure(123);
+clf;
+hold on;
+% stairs(kt,Vfkp1);
+% stairs(kt,Vfk);
+% stairs(kt,lQ);
+% stairs(kt,Vfk-lQ);
+stairs(kt,Vfkp1-(Vfk-lQ));
+grid on;
+
+legend('Vfkp1','RHS');
+
+% legend('Vf','Vf(k+1)-Vf(k)','stage l(k)','Vf - l');
 
 % show 3D simulation
 X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
@@ -143,4 +171,4 @@ visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]),0.1);
 % plot_2D_plots(t, states_trajectory);
 
 % plot the inputs
-plot_inputs(t,u,u_limit);
+% plot_inputs(t,u,u_limit);

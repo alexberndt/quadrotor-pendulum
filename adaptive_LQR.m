@@ -16,16 +16,16 @@ m = 0.5;        % kg
 L = 0.565;      % meters (Length of pendulum to center of mass)
 l = 0.17;       % meters (Quadrotor center to rotor center)
 I_yy = 3.2e-3;  % kg m^2 (Quadrotor inertia around y-axis)
-I_xx = I_yy;    
+I_xx = I_yy;    % kg m^2 (Quadrotor inertia around x-axis)      
 I_zz = 5.5e-3;  % kg m^2 (Quadrotor inertia around z-axis)
 
-simTime = 20;    % 8 second simulation
-h = 0.05;       % sampling time
+simTime = 4;   % 8 second simulation
+h = 0.1;       % sampling time
 N = simTime/h;        
 
 % define desired set point sequences in terms of Radius and Omega
-R_radius_sequence = 2*ones(1,N+1); % + 0.5*sin(0.02*(1:N+1));   % meters (radius of turn)
-Omega_sequence = 1*ones(1,N+1) + 0.0035*(1:N+1);      % rad/s (rotational velocity)
+R_radius_sequence = 2*ones(1,N+1);                  % meters (radius of turn)
+Omega_sequence = 1*ones(1,N+1) + 0.0035*(1:N+1);    % rad/s (rotational velocity)
 OmegaAngle_prev = 0;
 
 %% INITIALIZE VARIABLE SEQUENCES
@@ -66,6 +66,9 @@ u = zeros(3, N+1);
 y = zeros(12, N);
 t = zeros(1,N+1);
 
+Vf = zeros(1,N+1);
+X = eye(12);
+
 % define initial conditions
 %         p1  p2  q1 q2  u1 u2  v1 v2  w1 w2   mu   nu 
 x(:,1) = [0.2  0  0  0   0  0   0  0   0  0   0.20  0.2 ]';
@@ -83,9 +86,13 @@ for k = 1:N
     [Ad,Bd,Cd,EP] = linearized_ss(L,g,Omega,R_radius,h);
     
     % Define Q and R and determine optimal LQR gain based on new system matrices
-    R = 0.1*eye(3);                 
-    Q = zeros(12,12); Q(5,5) = 1; Q(7,7) = 1; Q(9,9) = 1;   % only penalize position errors
-    [~,eigvals,K] = dare(Ad,Bd,Q,R);
+    R = 0.05*eye(3);                 
+%     Q = zeros(12,12); Q(5,5) = 1; Q(7,7) = 1; Q(9,9) = 1; % only penalize position errors
+%     Q(1,1) = 1; Q(2,2) = 1; Q(3,3) = 1; Q(4,4) = 1; Q(6,6) = 1; Q(8,8) = 1; Q(10,10) = 1; Q(11,11) = 1; Q(12,12) = 1;
+    Q = eye(12);
+    Q(5,5) = 10; Q(7,7) = 10; Q(9,9) = 10;
+    
+    [X,eigvals,K] = dare(Ad,Bd,Q,R);
     
     % Determine control action from LQR   
     u(:,k) = -K*x(:,k);
@@ -154,6 +161,9 @@ for k = 1:N
     % Apply control and update state equations
     x(:,k+1) = Ad*x(:,k) + Bd*u(:,k);
     y(:,k) = Cd*x(:,k);
+    
+    % Determine Terminal Constraint
+    Vf(k) = 0.5*x(:,k)'*X*x(:,k);
 end
 
 %% PLOT 3D TRAJECTORY
@@ -168,108 +178,21 @@ visualize_quadrotor_trajectory_rotating(states_trajectory, reference_trajectory)
      
 %% PLOT RESULTS
 
-shouldplot = true;
-if shouldplot
-    % STATES 1-5
-    figure(1);
-    clf;
-    sgtitle('Pendulum States');
-    subplot 411;
-    stairs(t, x(1,:), 'm-');  grid();
-    ylabel('$p$ [m]','interpreter','latex');
+other.mu_actual = mu_actual;
+other.beta_dot_angle = beta_dot_angle;
+other.gamma_dot_angle = gamma_dot_angle;
+other.beta_angle = beta_angle;
+other.gamma_angle = gamma_angle;
 
-    subplot 412;
-    stairs(t, x(2,:), 'm-');  grid();
-    ylabel('$\dot{p}$ [m/s]','interpreter','latex');
+% plot_rotational(t,x,u,other);
 
-    subplot 413;
-    stairs(t, x(3,:), 'b-');  grid();
-    ylabel('$q$ [m]','interpreter','latex');
+% stability plots
+figure(123);
+Vf_dif = Vf(2:end) - Vf(1:end-1);
+stairs(Vf_dif);
+hold on
+stairs(Vf);
 
-    subplot 414;
-    stairs(t, x(4,:), 'b-');  grid();
-    ylabel('$\dot{q}$ [m/s]','interpreter','latex');
-    xlabel('Time [s]');
-
-    % STATES 6-10
-    figure(2);
-    clf;
-    sgtitle('Quadrotor States');
-    subplot 611;
-    stairs(t, x(5,:), 'm-');  grid();
-    ylabel('$u$ [m]','interpreter','latex');
-
-    subplot 612;
-    stairs(t, x(6,:), 'm-');  grid();
-    ylabel('$\dot{u}$ [m/s]','interpreter','latex');
-
-    subplot 613;
-    stairs(t, x(7,:), 'b-');  grid();
-    ylabel('$v$ [m]','interpreter','latex');
-
-    subplot 614;
-    stairs(t, x(8,:), 'b-');  grid();
-    ylabel('$\dot{v}$ [m/s]','interpreter','latex');
-
-    subplot 615;
-    stairs(t, x(9,:), 'k-');  grid();
-    ylabel('$w$ [m]','interpreter','latex');
-
-    subplot 616;
-    stairs(t, x(10,:), 'k-');  grid();
-    ylabel('$\dot{w}$ [m/s]','interpreter','latex');
-    xlabel('Time [s]');
-    
-    % EULER ANGLES    
-    figure(3);
-    clf;
-    sgtitle('Euler Angles');
-    subplot 211;
-    stairs(t, mu_actual, 'm-');  grid();
-    ylabel('$\mu$','interpreter','latex');
-
-    subplot 212;
-    stairs(t, x(12,:), 'm-');  grid();
-    ylabel('$\nu$','interpreter','latex');
-    xlabel('Time [s]');
-
-    % INPUTS
-    figure(4);
-    clf;
-    sgtitle('Inputs');
-    subplot 311;
-    stairs(t, u(1,:), 'm-');  grid();
-    ylabel('$\dot{\mu}$','interpreter','latex');
-
-    subplot 312;
-    stairs(t, u(2,:), 'm-');  grid();
-    ylabel('$\dot{\nu}$','interpreter','latex');
-
-    subplot 313;
-    stairs(t, u(3,:), 'm-');  grid();
-    ylabel('$a$','interpreter','latex');
-    xlabel('Time [s]');
-    
-    % INPUTS FOR ROTOR THRUST
-    figure(5);
-    clf;
-    stairs(t,beta_dot_angle);
-    hold on
-    stairs(t,gamma_dot_angle);
-    legend('beta dot','gamma dot');
-    title('Derivative of Control Inputs Seen By Quadrotor Props');
-    grid();
-
-    figure(6);
-    clf;
-    stairs(t,beta_angle);
-    hold on
-    stairs(t,gamma_angle);
-    legend('beta','gamma');
-    title('Control Inputs Seen By Quadrotor Props');
-    grid();
-end
-    
 %% FUNCTIONS
 function Rt = R_x(y)
    Rt = [1   0      0    ;
