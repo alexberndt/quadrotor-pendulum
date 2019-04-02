@@ -4,8 +4,9 @@ function plot_2D_plots(time, states_trajectory)
     show_x_horizontal_performance_plots = true;
     if show_x_horizontal_performance_plots
         figure(1);
-        clf;
-        sgtitle('x-direction horizontal motion and pitch angles');
+        % clf;
+        %sgtitle('x-direction horizontal motion and pitch angles');
+        sgtitle('');
         subplot 511;
         stairs(time, states_trajectory(:,1), 'm-');  grid();
         ylabel('$r$ [m]','interpreter','latex');
@@ -35,6 +36,7 @@ function plot_2D_plots(time, states_trajectory)
         figure(2);
         clf;
         sgtitle('y-direction horizontal motion and roll angles');
+        sgtitle('');
         subplot 511;
         stairs(time, states_trajectory(:,7), 'm-');  grid();
         ylabel('$s$ [m]','interpreter','latex');

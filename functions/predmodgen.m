@@ -5,6 +5,7 @@ function [P,S,W]=predmodgen(LTI,dim)
 %optimization problem
 
 LTI.C = eye(dim.nx);
+dim.ny = dim.nx;
 
 %Prediction matrix from initial state
 P=zeros(dim.ny*(dim.N),dim.nx);

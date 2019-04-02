@@ -19,7 +19,7 @@ I_yy = 3.2e-3;  % kg m^2 (Quadrotor inertia around y-axis)
 I_xx = I_yy;    % kg m^2 (Quadrotor inertia around x-axis)      
 I_zz = 5.5e-3;  % kg m^2 (Quadrotor inertia around z-axis)
 
-simTime = 2;   % 2 second simulation
+simTime = 8;   % 2 second simulation
 h = 0.1;       % sampling time
 N = simTime/h;        
 
@@ -231,7 +231,7 @@ other.gamma_dot_angle = gamma_dot_angle;
 other.beta_angle = beta_angle;
 other.gamma_angle = gamma_angle;
 
-% plot_rotational(t,x,u,other);
+plot_rotational(t,x,u,other);
 
 % stability plots
 figure(123);

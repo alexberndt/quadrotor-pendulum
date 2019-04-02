@@ -8,15 +8,16 @@ clear
 I = 3e-3; % inertia
 h = 0.1; % 0.01 s sampling time
 M = 0.3; % kg
+g = 9.81;
 
 % define linearized system
 
-A = [1 0 0 0 0 0;
-     h 1 0 0 0 0;
-     0 0 1 0 0 0;
-     0 0 h 1 0 0;
-     0 0 0 0 1 0;
-     0 0 0 0 h 1];
+A = [0 1  0 0 0 0;
+     0 0  0 0 -g 0;
+     0 0  0 1 0 0;
+     0 0  0 0 0 0;
+     0 0  0 0 1 0;
+     0 0  0 0 h 1];
  
 B = [h/I -h/I;
      0     0;

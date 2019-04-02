@@ -22,7 +22,12 @@ sysc = init_system_dynamics(g,m,L,l,I_xx,I_yy,I_zz);
 check_controllability(sysc);
 
 %% DISCRETIZE SYSTEM
-h = 0.02;
+
+h = 0.1;
+% simulation time
+simTime = 5.5;
+T = simTime/h;
+
 sysd = c2d(sysc,h);
 
 A = sysd.A;
@@ -31,16 +36,14 @@ C = sysd.C;
 
 %% LINEAR QUADRATIC REGULATOR
 
-% simulation time
-T = 5.5;
 %                      x      y     z    roll pitch       yaw
 x0 = [0.1 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0  0.3           0  0 ];
 
 % reference sequence
-r = [ 2.0*ones(1,((T/h)+1));
-      -6.0*ones(1,((T/h)+1));
-      0.5*ones(1,((T/h)+1));
-      1.0*ones(1,((T/h)+1))];
+r = [ 0*ones(1,(T+1));
+      0*ones(1,(T+1));
+      0*ones(1,(T+1));
+      0*ones(1,(T+1))];
   
 Q = eye(size(A));
 R = 0.1*eye(length(B(1,:)));
@@ -63,16 +66,14 @@ B_ref(9,2) = 1/dcgain_cl(9,2);
 B_ref(13,3) = 1/dcgain_cl(13,3);
 B_ref(15,4) = 1/dcgain_cl(15,4);
 
-
-N = T/h;
-x = zeros(length(A(:,1)),N);
-u = zeros(length(B(1,:)),N);
-y = zeros(length(C(:,1)),N);
-t = zeros(1,N);
+x = zeros(length(A(:,1)),T);
+u = zeros(length(B(1,:)),T);
+y = zeros(length(C(:,1)),T);
+t = zeros(1,T);
 
 x(:,1) = x0';
 
-for k = 1:1:N
+for k = 1:1:T
     t(k) = (k-1)*h;
     
     % compute control action
@@ -91,8 +92,8 @@ states_trajectory = y';
 plot_2D_plots(t, states_trajectory);
 
 % show 3D simulation
-X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
-visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]));
+% X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
+% visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]));
 
 
 
