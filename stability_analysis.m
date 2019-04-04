@@ -1,37 +1,45 @@
-%% STABILITY OF LINEARIZED QUADROTOR SYSTEM
-% 
+%% STABILITY OF LINEARIZED QUADROTOR AND INVERSE PENDULUM SYSTEM
+ 
 % Given a set of linearized system matrices, this code determines the
 % terminal set X_f which guarantees asymptotic stability. Finally, the
 % value of X_N (calygraph X) can be be determined for a given prediction
 % horizon N
 
+%%
 clc
 clear
-% close all
 addpath('functions/');
 
+disp('------------------------------------------------------------------');
+disp('          STABILITY ANALYSIS OF FLYING INVERTED PENDULUM ');
+disp('');
+disp('------------------------------------------------------------------');
+
 %% INITIALIZATION
+fprintf('\tinitializing ... \n');
 % DEFINE CONSTANTS
-g = 9.81;       % m/s^2
-m = 0.5;        % kg
-L = 0.565;      % meters (Length of pendulum to center of mass)
-l = 0.17;       % meters (Quadrotor center to rotor center)
-I_yy = 3.2e-3;  % kg m^2 (Quadrotor inertia around y-axis)
-I_xx = I_yy;    % kg m^2 (Quadrotor inertia around x-axis)
-I_zz = 5.5e-3;  % kg m^2 (Quadrotor inertia around z-axis)
+g = 9.81;           % m/s^2
+m = 0.5;            % kg
+L = 0.565;          % meters (Length of pendulum to center of mass)
+l = 0.17;           % meters (Quadrotor center to rotor center)
+I_yy = 3.2e-3;      % kg m^2 (Quadrotor inertia around y-axis)
+I_xx = I_yy;        % kg m^2 (Quadrotor inertia around x-axis)
+I_zz = 5.5e-3;      % kg m^2 (Quadrotor inertia around z-axis)
 sysc = init_system_dynamics(g,m,L,l,I_xx,I_yy,I_zz);
 % DISCRETIZE SYSTEM
-simTime = 5;
-h = 0.1;
-sysd = c2d(sysc,h);
+        
+h = 0.1;            % sampling time (sec)
+sysd = c2d(sysc,h); % convert to disrete-time system
 Ad = sysd.A;
 Bd = sysd.B;
 Cd = zeros(8,16);                           % Measured outputs
 Cd(1,1) = 1; Cd(2,3) = 1;                   % Pendulum position
 Cd(3,5) = 1; Cd(4,7) = 1; Cd(5,9) = 1;      % Quad position
 Cd(6,11) = 1; Cd(7,13) = 1; Cd(8,15) = 1;   % Quad rotation angle
+fprintf('\tdone!\n');
 
 %% DETERMINE OPTIMAL LQR GAIN FOR MPC COST FUNCTION
+fprintf('\tdetermining LQR optimal control action ... \n');
 
 Q = 10*eye(size(Ad));           % state quadratic cost 
 R = 0.1*eye(length(Bd(1,:)));   % input quadratic cost
@@ -41,14 +49,17 @@ R = 0.1*eye(length(Bd(1,:)));   % input quadratic cost
 A_K = Ad-Bd*K_LQR;              % closed-loop LQR system
 eigvals_A_K = eig(A_K);         % determine closed-loop eigenvalues
 
+fprintf('\tdone!\n');
 %% DETERMINE INVARIANT ADMISSIBLE SET X_f
+fprintf('\testimating X_f invariant set \n');
 
 dim.nx = 16;        %
 dim.nu = 4;         %
 
 u_limit = 0.1;      % bound on control inputs
-x_limit = 5;
+x_limit = 5;        % bound on states
 
+fprintf('\t - defining state and input constraints \n');
 Fu = kron(eye(dim.nu),[1; -1]);
 Fx = kron(eye(dim.nx),[1; -1]);
 
@@ -62,32 +73,37 @@ s = size(F,1);
 
 C_aug = [K_LQR; eye(dim.nx)];
 
-%% TEST PEDRO CODE
-
-% [H_pedro,h_pedro] = max_out_set_pedro(A_K,K_LQR,0.1);
-
-[H_pedro,h_pedro] = max_output_set(A_K,K_LQR,0.1,5*ones(16,1));
-
-%% DETERMINE MAXIMUM INVARIANT SET X_f
-
+% DETERMINE MAXIMUM INVARIANT SET X_f
 % [Xf_set_H, Xf_set_h, kstar] = calcInvariantXf(A_K,C_aug,F,f,s,dim);
+
+%% COMPARE WITH PEDRO CODE
+
+[Xf_set_H,Xf_set_h] = max_output_set(A_K,K_LQR,0.1,x_limit*ones(16,1));
+
+fprintf('\tSuccesfully constructed terminal set X_f\n');
 
 %% CHECK CONSTRAINT
 
-% initial condition
-%     r    r   x x   b b     s    s y y g g  z z  yaw y
-x0 = [0.02 0   0 0   0 0     0.01 0 0 0 0 0  0 0  0 0]';
+% given X_f calculated before, we can test if a given state x0 is within
+% this set or not. This is done here:
+
+% state x0
+%     r    r   x x   b b     s    s y y g g  z z  yaw y    <-- state names
+x0 = [0.02 0   0 0   0 0     0.01 0 0 0 0 0  0 0  0 0]'; % <-- state values
 
 % check if the x-location is within X_f
-inSet = all(Xf_set_H*x0 <= Xf_set_h)
-all(H_pedro*x0 <= h_pedro)
+inSet = all(Xf_set_H*x0 <= Xf_set_h);
 
 %% TEST IF MPC LAW GUIDES TOWARDS X_f IN N-STEPS
-%
-% Empirically construct a state X_N (calygraph X) to determine which states
-% can be steered to the terminal set X_f in N steps.
+
+% Having constructed X_f, we empirically construct a state X_N (calygraph X) 
+% to determine which states can be steered to the terminal set X_f in N 
+% steps.
+
+fprintf('\tDetermining X_N emperically ...\n');
 
 N = 10;                     % prediction horizon
+fprintf('\t - N = %i (prediction horizon) \n',N);
 
 x = zeros(dim.nx,N+1);      % state trajectory
 
@@ -140,6 +156,7 @@ beta_i = 1;
 for betaVal = [0.001 1 10]
     
     Sbar = betaVal*S;
+    fprintf('\t - Beta = %d \n',betaVal)
 
     H = (Z'*Qbar*Z + Rbar + 2*W'*Sbar*W);
     d = (x0'*P'*Qbar*Z + 2*x0'*(Ad^N)'*Sbar*W)';
@@ -184,8 +201,12 @@ for betaVal = [0.001 1 10]
     beta_i = beta_i + 1;
 end
 
+fprintf('\tdone!\n');
+
 % plot the initial conditions which were steered towards the terminal set
 % X_f within N steps
+
+fprintf('\tplotting results ... \n');
 
 figure(1);
 subplot(3,1,1);
@@ -196,6 +217,8 @@ imagesc(mat(:,:,2));
 
 subplot(3,1,3);
 imagesc(mat(:,:,3));
+
+fprintf('\tdone! \n');
 
 %% PLOT THE CONSTRAINT SET X_f
 

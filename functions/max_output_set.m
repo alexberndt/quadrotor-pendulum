@@ -17,7 +17,11 @@ k=0;
 
 A_in=[];
 b = [];
+
+opts = optimoptions('linprog','Display','off');
+
 while exit_flag==0 
+    fprintf('\tk = %i \n',k);
     A_in = [A_in; K*A^k; -K*A^k; A^k; -A^k];
     b = [b; f];
      
@@ -25,7 +29,7 @@ while exit_flag==0
      
     opt_val = zeros(1,s);
     for i=1:s                
-        [~,fval,exit] = linprog(-h(i,:),A_in,b);
+        [~,fval,exit] = linprog(-h(i,:),A_in,b,[],[],[],[],opts);
         if exit == -3
             fval = inf;
         end
@@ -36,8 +40,9 @@ while exit_flag==0
         exit_flag=1;
         H=A_in;
         h=b;
+        fprintf('\tdone!\n');
     else
-        k=k+1;
+        k = k+1;
     end
 end
 

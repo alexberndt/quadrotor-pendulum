@@ -5,6 +5,7 @@ function [Xf_set_H, Xf_set_h, k_star] = calcInvariantXf(A_K,C_aug,F,f,s,dim)
     A = [];
 
     while (exit_flag == 0)  
+        fprintf('%i',k);
         % Set the constraints for the optimization problem
         % A=[];
         % for t=1:k+1
@@ -30,7 +31,7 @@ function [Xf_set_H, Xf_set_h, k_star] = calcInvariantXf(A_K,C_aug,F,f,s,dim)
                 subject to
                  A*x_opt - b <= 0;
              cvx_end
-             disp(k);
+             % disp(k);
 
             % Save optimal value
             opt_val(i)=cvx_optval;
