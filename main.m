@@ -7,7 +7,7 @@ clear
 
 answer = questdlg('Which simulation to run?', ...
 	'Simulations', ...
-	'Reference MPC','Trajectory MPC','Simple Quadrotor','Cancel');
+	'Reference MPC','Trajectory MPC','Stability Analysis','Cancel');
 % Handle response
 switch answer
     case 'Reference MPC'
@@ -18,10 +18,18 @@ switch answer
         close all
         disp(['Running: ' answer])
         run('adaptive_LQR.m');
-    case 'Simple Quadrotor'
+    case 'Output MPC'
         close all
         disp(['Running: ' answer])
-        run('stability_quad.m');
+        run('output_MPC.m');
+    case 'Disturbance Output MPC'
+        close all
+        disp(['Running: ' answer])
+        run('output_MPC_w_offset.m');
+    case 'Stability Analysis'
+        close all
+        disp(['Running: ' answer])
+        run('stability_analysis.m');
     case 'Cancel'
         disp('Cancelled -> No simulation run.');
 end
