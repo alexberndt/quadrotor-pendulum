@@ -2,8 +2,11 @@
 %
 % MATLAB simulation of the paper A Flying Inverted Pendulum by Markus Hehn 
 % and Raffaello D'Andrea using a Model Predictive Controller
+%
+% Reference tracking with disturbance rejection using Optimal Target
+% Selection (OTS) as in Lecture 6 page 17/21
 
-%% INIT
+%% INITIALIZATION
 clc
 clear
 addpath('functions/');
@@ -14,7 +17,7 @@ m = 0.5;        % kg
 L = 0.565;      % meters (Length of pendulum to center of mass)
 l = 0.17;       % meters (Quadrotor center to rotor center)
 I_yy = 3.2e-3;  % kg m^2 (Quadrotor inertia around y-axis)
-I_xx = I_yy;    
+I_xx = I_yy;    % kg m^2 (Quadrotor inertia around x-axis)
 I_zz = 5.5e-3;  % kg m^2 (Quadrotor inertia around z-axis)
 
 %% DEFINE STATE SPACE SYSTEM
@@ -22,58 +25,47 @@ sysc = init_system_dynamics(g,m,L,l,I_xx,I_yy,I_zz);
 check_controllability(sysc);
 
 %% DISCRETIZE SYSTEM
-
-% simulation time in seconds
-simTime = 10;
-h = 0.04;
+simTime = 10;   % simulation time in seconds
+h = 0.04;       % sampling time in seconds
 
 sysd = c2d(sysc,h);
 T = simTime/h;
 
 A = sysd.A;
 B = sysd.B;
-Cplot = sysd.C;
+Cplot = sysd.C;                         % use full states for plotting
 
-C = zeros(8,16);
-C(1,1) = 1; C(2,3) = 1;                 % pendulum position
-C(3,5) = 1; C(4,7) = 1; C(5,9) = 1;     % quad position
-C(6,11) = 1; C(7,13) = 1; C(8,15) = 1;  % quad rotation angle
+C = zeros(8,16);                        % Measured outputs
+C(1,1) = 1; C(2,3) = 1;                 % Pendulum position
+C(3,5) = 1; C(4,7) = 1; C(5,9) = 1;     % Quad position
+C(6,11) = 1; C(7,13) = 1; C(8,15) = 1;  % Quad rotation angle
 
 %% MODEL PREDICTIVE CONTROL
 
-% initial state
+% actual initial state
 %       r   r x    x beta   s   s y    y gamma z    zd  yaw yawd
 x0 = [0.005 0 0.01 0 0 0  0.005 0 0.04 0  0 0  0.02 0  0.03 0]';
-xhat0 = zeros(1,16);
 
-% desired reference (x,y,z,yaw)
-r = [zeros(1,T/2) -5*ones(1,T/2);   % x reference
-     zeros(1,T/2) 5*ones(1,T/2);    % y reference
-     zeros(1,T);                    % z reference
-     zeros(1,T)];                   % yaw reference
+% observer initial state
+xhat0 = zeros(1,16);
  
-y_ref_OTS = [zeros(1,T);
-             zeros(1,T/2) -1*ones(1,T/2);
-             zeros(1,T);
-             zeros(1,T);
-             zeros(1,T/2)  1*ones(1,T/2);
-             zeros(1,T);
-             zeros(1,T);
-             zeros(1,T)];           % y reference
-         
+% desired output reference 
+y_ref_OTS = [zeros(1,T);                    % r 
+             zeros(1,T/2) -1*ones(1,T/2);   % x
+             zeros(1,T);                    % beta
+             zeros(1,T);                    % s
+             zeros(1,T/2)  1*ones(1,T/2);   % y
+             zeros(1,T);                    % gamma
+             zeros(1,T);                    % z
+             zeros(1,T/2)  1*ones(1,T/2)];  % yaw 
+
+% Optimal Target Selection reference states and inputs
 x_ref_OTS = zeros(16,T);
 u_ref_OTS = zeros(4,T);
 dhat = zeros(1,T);
  
 % disturbance input (x)
 d_dist = [zeros(1,T/10) 0.01*ones(1,T*9/10)];  
-
-% B_ref relates reference to states x_ref = B_ref*r
-B_ref = zeros(16,4);
-B_ref(3,1) = 1;
-B_ref(9,2) = -1;
-B_ref(13,3) = 1;
-B_ref(15,4) = 1;
 
 x = zeros(length(A(:,1)),T);        % state trajectory
 yplot = zeros(length(A(:,1)),T);    % output to plot
@@ -165,17 +157,20 @@ for k = 1:1:T
     b_OTS = [Bd*dhat(:,k);
              y_ref_OTS(:,k) - Cd*dhat(:,k)];
     
-    cvx_begin quiet
-        variable xr_ur(20)
-        minimize ( quad_form(xr_ur,J_OTS) )
-        A_OTS*xr_ur == b_OTS;
-    cvx_end
+%     cvx_begin quiet
+%         variable xr_ur(20)
+%         minimize ( quad_form(xr_ur,J_OTS) )
+%         A_OTS*xr_ur == b_OTS;
+%     cvx_end
+    
+    opts = optimoptions('quadprog','Display','off');
+    [xr_ur,~,exitflag] = quadprog(J_OTS,zeros(20,1),[],[],A_OTS,b_OTS,[],[],[],opts);
     
     x_ref_OTS(:,k) = xr_ur(1:16);
     u_ref_OTS(:,k) = xr_ur(17:20);
     
     % determine reference states based on reference input r
-    x_ref = B_ref*r(:,k);
+    % x_ref = B_ref*r(:,k);
     x0_est = xhaug(1:16,k) - x_ref_OTS(:,k);
     d = (x0_est'*P'*Qbar*Z + 2*x0_est'*(A^N)'*Sbar*W)';
     
