@@ -71,8 +71,8 @@ x(:,1) = x0';
 %          k = 0
 
 % tuning weights
-Q = 0.005*eye(size(A));            % state cost
-R = 1*eye(length(B(1,:)));    % input cost
+Q = 1*eye(size(A));            % state cost
+R = 1000*eye(length(B(1,:)));    % input cost
 
 % terminal cost = unconstrained optimal cost (Lec 5 pg 6)
 [S,~,~] = dare(A,B,Q,R);        % terminal cost % OLD: S = 10*eye(size(A));
@@ -168,25 +168,24 @@ kt = t(1:end-1);
 % legend('Vf','Vf(k+1)-Vf(k)','stage l(k)','Vf - l');
 
 % show 3D simulation
-X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
-visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]),0.1);
+% X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
+% visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]),0.1);
 
-saved_traj_Q10_R01_Sdare.t = t;
-saved_traj_Q10_R01_Sdare.x = states_trajectory;
-saved_traj_Q10_R01_Sdare.u = u;
+saved_data.t = t;
+saved_data.x = states_trajectory;
+saved_data.u = u;
 
 %% Basic Plots
 % plot 2D results fo state trajectories
-plot_2D_plots(t, states_trajectory);
-
-% plot the inputs
-plot_inputs(t,u,u_limit);
+% plot_2D_plots(t, states_trajectory);
+% 
+% % plot the inputs
+% plot_inputs(t,u,u_limit);
 
 %% Comparison Plots
 
-plot_comparison_S_different(); % 543
-plot_comparison_R_different(); % 544
-plot_comparison_Q_different(); % 546
+% plot_comparison_S_different(); % 543
+% plot_comparison_R_different(); % 544
+% plot_comparison_Q_different(); % 546
 
-
-
+plot_comparison_R_inputs();    % 589
