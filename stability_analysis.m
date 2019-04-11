@@ -246,7 +246,12 @@ fprintf('\tdone! \n');
 
 
 
-
+% 
+% H = [1 2; 0 5];
+% f = [1; 3];
+% 
+% [X,fval,exitflag,output,lambda,Tsolve,c,G,h,dims,Aeq,beq] = ecosqp(H,f);
+% 
 
 
 

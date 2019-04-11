@@ -242,7 +242,10 @@ visualize_quadrotor_trajectory(X);
 
 %% Basic Plots
 % plot 2D results fo state trajectories
-plot_2D_plots(t, states_trajectory);
+
+
+
+plot_2D_plots_offset(t, states_trajectory, d_dist, x_ref_OTS(3,:)); %547
 
 % plot the inputs
 plot_inputs(t,u,u_limit);

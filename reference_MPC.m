@@ -37,6 +37,7 @@ C = sysd.C;
 %% MODEL PREDICTIVE CONTROL
 
 % initial state
+%     r1   r2 x1 x2 b1 b2    s1 s2 y1 y2 g1 g2   z1 z2   yaw1 yaw2
 x0 = [0.05 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0]';
 
 % desired reference (x,y,z,yaw)
@@ -70,11 +71,15 @@ x(:,1) = x0';
 %          k = 0
 
 % tuning weights
-Q = 10*eye(size(A));            % state cost
-R = 0.1*eye(length(B(1,:)));    % input cost
+Q = 0.005*eye(size(A));            % state cost
+R = 1*eye(length(B(1,:)));    % input cost
 
 % terminal cost = unconstrained optimal cost (Lec 5 pg 6)
 [S,~,~] = dare(A,B,Q,R);        % terminal cost % OLD: S = 10*eye(size(A));
+
+S = Q;
+
+% S = 1000*eye(16);
 
 % prediction horizon
 N = 18; 
@@ -148,17 +153,17 @@ lQ = l(2:end);
 
 kt = t(1:end-1);
 
-figure(123);
-clf;
-hold on;
-% stairs(kt,Vfkp1);
-% stairs(kt,Vfk);
-% stairs(kt,lQ);
-% stairs(kt,Vfk-lQ);
-stairs(kt,Vfkp1-(Vfk-lQ));
-grid on;
-
-legend('Vfkp1','RHS');
+% figure(123);
+% clf;
+% hold on;
+% % stairs(kt,Vfkp1);
+% % stairs(kt,Vfk);
+% % stairs(kt,lQ);
+% % stairs(kt,Vfk-lQ);
+% stairs(kt,Vfkp1-(Vfk-lQ));
+% grid on;
+% 
+% legend('Vfkp1','RHS');
 
 % legend('Vf','Vf(k+1)-Vf(k)','stage l(k)','Vf - l');
 
@@ -166,9 +171,22 @@ legend('Vfkp1','RHS');
 X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
 visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]),0.1);
 
+saved_traj_Q10_R01_Sdare.t = t;
+saved_traj_Q10_R01_Sdare.x = states_trajectory;
+saved_traj_Q10_R01_Sdare.u = u;
+
 %% Basic Plots
 % plot 2D results fo state trajectories
 plot_2D_plots(t, states_trajectory);
 
 % plot the inputs
 plot_inputs(t,u,u_limit);
+
+%% Comparison Plots
+
+plot_comparison_S_different(); % 543
+plot_comparison_R_different(); % 544
+plot_comparison_Q_different(); % 546
+
+
+
