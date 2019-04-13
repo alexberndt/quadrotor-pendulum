@@ -20,7 +20,7 @@ function plot_2D_plots_offset(time, states_trajectory, offset_sequence, referenc
 
         subplot 312;
         stairs(time, states_trajectory(:,3), 'b-');  grid(); hold on;
-        stairs(time, 25*offset_sequence, 'k-');
+        stairs(time, 25*offset_sequence(1,:), 'k-');
         stairs(time, reference_sequence, 'r-');
         ylabel('$x$ [m]','interpreter','latex');
         ylim([-1.05 0.34]);
@@ -43,7 +43,6 @@ function plot_2D_plots_offset(time, states_trajectory, offset_sequence, referenc
     show_y_horizontal_performance_plots = true;
     if show_y_horizontal_performance_plots
         figure(2);
-        clf;
         sgtitle('y-direction horizontal motion and roll angles');
         sgtitle('');
         subplot 511;

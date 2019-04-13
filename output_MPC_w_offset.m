@@ -11,6 +11,12 @@ clc
 clear
 addpath('functions/');
 
+disp('------------------------------------------------------------------');
+disp('          OUTPUT MPC WITH DISTURBANCE REJECTION ');
+disp('');
+disp('------------------------------------------------------------------');
+
+
 %% DEFINE CONSTANTS
 g = 9.81;       % m/s^2
 m = 0.5;        % kg
@@ -42,7 +48,6 @@ C = zeros(8,16);                        % Measured outputs
 
 C(1,1) = 1; C(4,7) = 1;                 % Pendulum position
 C(2,3) = 1; C(5,9) = 1; C(7,13) = 1;    % Quad position
-% C(3,5) = 1; C(6,11) = 1; C(8,15) = 1;   % Quad rotation angle
 C(3,6) = 1; C(6,12) = 1; C(8,15) = 1;   % Quad rotation angle rates
 
 Oc = ctrb(A',C');
@@ -157,18 +162,27 @@ Baug = [B; zeros(n_d,4)];
 Caug = [C Cd];
 
 test_Obs = [eye(16)-A -Bd; C Cd];
-rank(test_Obs)
+disp('Rank of Augmented System n+nd = 18 for full rank');
+disp(rank(test_Obs))
 
 Q_kf = 1*eye(8);
 R_kf = 1*eye(16+n_d);
 
 [~,Obs_eigvals,Obs_gain] = dare(Aaug',Caug',R_kf,Q_kf);
 Obs_gain = Obs_gain';
-abs(Obs_eigvals)
+disp('Eigenvalues of Kalman Filter Observer:');
+disp(abs(Obs_eigvals))
 
 %% Simulate system
 
 u_limit = 0.1;
+
+disp('------------------------------------------------------------------');
+disp('                Simulating Output MPC System');
+disp('------------------------------------------------------------------');
+disp('');
+disp('Simulation time: 15 seconds');
+disp('');
 
 for k = 1:1:T
     t(k) = (k-1)*h;

@@ -138,22 +138,22 @@ dim.ny = size(Cd,1);
 
 % define input constraints
 u_limit = 0.1;
-lb = -u_limit*ones(72,1);
-ub = u_limit*ones(72,1);
+lb = -u_limit*ones(4*N,1);
+ub = u_limit*ones(4*N,1);
 
 % Define IC_test_vals as the set of initial conditions to consider
 r = 1;
 s = 1;
 
 res = 10;
-bnd_x = 0.3;
-bnd_y = 0.3;
+bnd_x = 0.2;
+bnd_y = 0.2;
 
 mat = zeros(res,res,3);
 % matPedro = zeros(res,res);
 beta_i = 1;
 
-for betaVal = [0.001 1 10]
+for betaVal = [0.1 1 10]
     
     Sbar = betaVal*S;
     fprintf('\t - Beta = %d \n',betaVal)
@@ -172,10 +172,11 @@ for betaVal = [0.001 1 10]
                 % define current state position
                 x_current = x(:,k);
                 d = (x_current'*P'*Qbar*Z + 2*x_current'*(Ad^N)'*Sbar*W)';
-
+                warning off
                 % solve QP problem
                 opts = optimoptions('quadprog','Display','off');
                 uopt = quadprog(H,d,[],[],[],[],lb,ub,[],opts);
+                warning on
 
                 % obtain optimal control action at k=0
                 u(:,k) = uopt(1:4);

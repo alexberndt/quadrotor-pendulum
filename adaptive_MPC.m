@@ -239,6 +239,7 @@ Vf_dif = Vf(2:end) - Vf(1:end-1);
 stairs(Vf_dif);
 hold on
 stairs(Vf);
+grid();
 
 %% FUNCTIONS
 function Rt = R_x(y)
