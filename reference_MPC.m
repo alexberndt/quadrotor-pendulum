@@ -72,7 +72,7 @@ x(:,1) = x0';
 
 % tuning weights
 Q = 1*eye(size(A));            % state cost
-R = 1000*eye(length(B(1,:)));    % input cost
+R = 1*eye(length(B(1,:)));    % input cost
 
 % terminal cost = unconstrained optimal cost (Lec 5 pg 6)
 [S,~,~] = dare(A,B,Q,R);        % terminal cost % OLD: S = 10*eye(size(A));
@@ -175,8 +175,8 @@ kt = t(1:end-1);
 % legend('Vf','Vf(k+1)-Vf(k)','stage l(k)','Vf - l');
 
 % show 3D simulation
-X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
-visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]),0.1);
+% X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
+% visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]),0.1);
 
 saved_data.t = t;
 saved_data.x = states_trajectory;
@@ -191,8 +191,11 @@ plot_inputs(t,u,u_limit);
 
 %% Comparison Plots
 
-% plot_comparison_S_different(); % 543
-% plot_comparison_R_different(); % 544
-% plot_comparison_Q_different(); % 546
+plot_comparison_S_different(); % 543
+plot_comparison_R_different(); % 544
+plot_comparison_Q_different(); % 546
 
-% plot_comparison_R_inputs();    % 589
+plot_comparison_R_inputs();    % 589
+
+%%
+plot_comparison_MPC_LQR();     % 567

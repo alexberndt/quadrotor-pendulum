@@ -25,7 +25,7 @@ check_controllability(sysc);
 
 h = 0.1;
 % simulation time
-simTime = 5.5;
+simTime = 10;
 T = simTime/h;
 
 sysd = c2d(sysc,h);
@@ -37,7 +37,11 @@ C = sysd.C;
 %% LINEAR QUADRATIC REGULATOR
 
 %                      x      y     z    roll pitch       yaw
-x0 = [0.1 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0  0.3           0  0 ];
+% x0 = [0.1 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0  0.3           0  0 ];
+x0 = [0.05 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0]';
+
+%     r1   r2 x1 x2 b1 b2    s1 s2 y1 y2 g1 g2   z1 z2   yaw1 yaw2 
+x0 = [0.1  0.1 0.4 0 0 0    0.05 0 0.4 0 0 0      0.5 0  0 0 ]';
 
 % reference sequence
 r = [ 0*ones(1,(T+1));
@@ -45,8 +49,8 @@ r = [ 0*ones(1,(T+1));
       0*ones(1,(T+1));
       0*ones(1,(T+1))];
   
-Q = eye(size(A));
-R = 0.1*eye(length(B(1,:)));
+Q = 0.1*eye(size(A));
+R = 700*eye(length(B(1,:)));
 
 [K,S,e] = dlqr(A,B,Q,R,[]); 
 
@@ -73,11 +77,15 @@ t = zeros(1,T);
 
 x(:,1) = x0';
 
+sat = @(s) min(max(s, -0.1), 0.1);
+
 for k = 1:1:T
     t(k) = (k-1)*h;
     
     % compute control action
-    u(:,k) = -K*x(:,k);   
+    u(:,k) = -K*x(:,k);  
+    
+    u(:,k) = sat(u(:,k));
     
     % apply control action
     x(:,k+1) = A*x(:,k) + B*u(:,k) + B_ref*r(:,k);
@@ -91,11 +99,15 @@ states_trajectory = y';
 % plot 2D results
 plot_2D_plots(t, states_trajectory);
 
+% plot_inputs(t,u,0.1);
+
 % show 3D simulation
 % X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
 % visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]));
 
-
+saved_data.t = t;
+saved_data.x = states_trajectory;
+saved_data.u = u;
 
 
 
