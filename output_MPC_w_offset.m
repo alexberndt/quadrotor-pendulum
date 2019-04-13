@@ -25,7 +25,7 @@ sysc = init_system_dynamics(g,m,L,l,I_xx,I_yy,I_zz);
 check_controllability(sysc);
 
 %% DISCRETIZE SYSTEM
-simTime = 10;   % simulation time in seconds
+simTime = 15;   % simulation time in seconds
 h = 0.04;       % sampling time in seconds
 
 sysd = c2d(sysc,h);
@@ -36,9 +36,19 @@ B = sysd.B;
 Cplot = sysd.C;                         % use full states for plotting
 
 C = zeros(8,16);                        % Measured outputs
-C(1,1) = 1; C(2,3) = 1;                 % Pendulum position
-C(3,5) = 1; C(4,7) = 1; C(5,9) = 1;     % Quad position
-C(6,11) = 1; C(7,13) = 1; C(8,15) = 1;  % Quad rotation angle
+% C(1,1) = 1; C(2,7) = 1;                 % Pendulum position (r=1 s=7)
+% C(3,3) = 1; C(4,9) = 1; C(5,13) = 1;    % Quad position (x=3 y=9 z=13)
+% C(6,5) = 1; C(7,11) = 1; C(8,15) = 1;   % Quad rotation angle rate (beta=5 gamma=11 yaw=15)
+
+C(1,1) = 1; C(4,7) = 1;                 % Pendulum position
+C(2,3) = 1; C(5,9) = 1; C(7,13) = 1;    % Quad position
+% C(3,5) = 1; C(6,11) = 1; C(8,15) = 1;   % Quad rotation angle
+C(3,6) = 1; C(6,12) = 1; C(8,15) = 1;   % Quad rotation angle rates
+
+Oc = ctrb(A',C');
+Obs_rank = rank(Oc);
+disp('Rank of observability matrix');
+disp(Obs_rank);
 
 %% MODEL PREDICTIVE CONTROL
 
@@ -51,26 +61,37 @@ xhat0 = zeros(1,16);
  
 % desired output reference 
 y_ref_OTS = [zeros(1,T);                    % r 
-             zeros(1,T/2) -1*ones(1,T/2);   % x
+             zeros(1,T/3) -1*ones(1,2*T/3);   % x
              zeros(1,T);                    % beta
              zeros(1,T);                    % s
-             zeros(1,T/2)  1*ones(1,T/2);   % y
+             zeros(1,T/3)  1*ones(1,2*T/3);   % y
              zeros(1,T);                    % gamma
              zeros(1,T);                    % z
-             zeros(1,T/2)  1*ones(1,T/2)];  % yaw 
+             zeros(1,T/3)  1*ones(1,2*T/3)];  % yaw 
+         
+% y_ref_OTS = [zeros(1,T);                    % r 
+%              zeros(1,T);   % x
+%              zeros(1,T);                    % beta
+%              zeros(1,T);                    % s
+%              zeros(1,T);    % y
+%              zeros(1,T);                    % gamma
+%              zeros(1,T);                    % z
+%              zeros(1,T)];    % yaw 
+         
+n_d = 2;
 
 % Optimal Target Selection reference states and inputs
 x_ref_OTS = zeros(16,T);
 u_ref_OTS = zeros(4,T);
-dhat = zeros(1,T);
+dhat = zeros(n_d,T);
  
 % disturbance input (x)
-d_dist = [zeros(1,T/10) 0.01*ones(1,T*9/10)];  
+d_dist = [zeros(n_d,T/15) 0.01*ones(n_d,T/15) zeros(n_d,8*T/15) 0.01*ones(n_d,5*T/15)];  
 
 x = zeros(length(A(:,1)),T);        % state trajectory
 yplot = zeros(length(A(:,1)),T);    % output to plot
 xhat = zeros(length(A(:,1)),T);     % estimated trajectories 
-xhaug = zeros(length(A(:,1))+1,T);  % augmented states (16 + 1) x + d
+xhaug = zeros(length(A(:,1))+n_d,T);  % augmented states (16 + 2) x + d
 
 u = zeros(length(B(1,:)),T);        % control inputs
 y = zeros(length(C(:,1)),T);        % measurements 
@@ -121,21 +142,29 @@ d = (x0'*P'*Qbar*Z + 2*x0'*(A^N)'*Sbar*W)';
  
 %% Define augmented observer
 
-Bd = [0 0 1 0 0 0  0 0 0 0 0 0  0 0  0 0]';
-Cd = [0   1   0    0   0   0    0    0  ]';
+Bd = [0 0 1 0 0 0  0 0 0 0 0 0  0 0  0 0;
+      0 0 0 0 0 0  0 0 1 0 0 0  0 0  0 0]';
+Cd = [0   0   0    0   0   1    0    0  ;
+      0   0   1    0   0   0    0    0  ]';
+  
+n_d = 2;
 
 Aaug = [A           Bd;
-        zeros(1,16) 1];
+        zeros(n_d,16) eye(n_d)];
 
-Baug = [B; zeros(1,4)];
+Baug = [B; zeros(n_d,4)];
 
 Caug = [C Cd];
 
+test_Obs = [eye(16)-A -Bd; C Cd];
+rank(test_Obs)
+
 Q_kf = 1*eye(8);
-R_kf = 1*eye(17);
+R_kf = 1*eye(16+n_d);
 
 [~,Obs_eigvals,Obs_gain] = dare(Aaug',Caug',R_kf,Q_kf);
 Obs_gain = Obs_gain';
+abs(Obs_eigvals)
 
 %% Simulate system
 
@@ -144,7 +173,7 @@ u_limit = 0.1;
 for k = 1:1:T
     t(k) = (k-1)*h;
     if ( mod(t(k),1) == 0 )
-        disp(t(k));
+        fprintf('t = %d sec \n', t(k));
     end
     
     % Optimal Target Selector
@@ -191,7 +220,7 @@ for k = 1:1:T
     y(:,k) = C*x(:,k) + Cd*d_dist(:,k);
     
     Cdplot = [0 0 1 0 0 0  0 0 0 0 0 0  0 0  0 0]';
-    yplot(:,k) = Cplot*x(:,k) + Cdplot*d_dist(:,k);
+    yplot(:,k) = Cplot*x(:,k) + Cdplot*d_dist(1,k);
     
     % observer 
     % yhat(:,k) = C*xhat(:,k);
@@ -201,7 +230,7 @@ for k = 1:1:T
     yhat(:,k) = Caug*xhaug(:,k);
     xhaug(:,k+1) = Aaug*xhaug(:,k) + Baug*u(:,k) + Obs_gain*( y(:,k) - yhat(:,k) );
     
-    dhat(:,k+1) = xhaug(17,k+1); 
+    dhat(:,k+1) = xhaug(17:18,k+1); 
     % e(:,k) = x(:,k) - xhat(:,k);
     
     % stability analysis
@@ -242,8 +271,6 @@ visualize_quadrotor_trajectory(X);
 
 %% Basic Plots
 % plot 2D results fo state trajectories
-
-
 
 plot_2D_plots_offset(t, states_trajectory, d_dist, x_ref_OTS(3,:)); %547
 
