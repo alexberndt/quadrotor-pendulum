@@ -10,6 +10,11 @@ clc
 clear
 addpath('functions/');
 
+disp('------------------------------------------------------------------');
+disp('                        ADAPTIVE MPC  ');
+disp('');
+disp('------------------------------------------------------------------');
+
 %% DEFINE CONSTANTS
 g = 9.81;       % m/s^2
 m = 0.5;        % kg
@@ -19,8 +24,9 @@ I_yy = 3.2e-3;  % kg m^2 (Quadrotor inertia around y-axis)
 I_xx = I_yy;    % kg m^2 (Quadrotor inertia around x-axis)      
 I_zz = 5.5e-3;  % kg m^2 (Quadrotor inertia around z-axis)
 
-simTime = 10;   % 2 second simulation
+simTime = 6;   % 2 second simulation
 h = 0.1;       % sampling time
+fprintf('Sampling time: %f \n',h');
 N = simTime/h;        
 
 % define desired set point sequences in terms of Radius and Omega
@@ -75,10 +81,20 @@ x(:,1) = [0.1  0  0  0   0  0   0  0   0  0   0.10  0.1 ]';
 
 %% ITERATE THROUGH EACH TIME STEP
 
+disp('------------------------------------------------------------------');
+disp('                     Simulating MPC System');
+disp('------------------------------------------------------------------');
+disp('');
+fprintf('Simulation time: %d seconds \n',simTime);
+disp('');
+
 u_limit = 1;
 
 for k = 1:N
     t(:,k+1) = k*h;
+    if ( mod(t(k),1) == 0 )
+        fprintf('t = %d sec \n', t(k));
+    end
     
     % Obtain new linearized system
     Omega = Omega_sequence(k);
@@ -234,12 +250,12 @@ other.gamma_angle = gamma_angle;
 plot_rotational(t,x,u,other);
 
 % stability plots
-figure(123);
-Vf_dif = Vf(2:end) - Vf(1:end-1);
-stairs(Vf_dif);
-hold on
-stairs(Vf);
-grid();
+% figure(123);
+% Vf_dif = Vf(2:end) - Vf(1:end-1);
+% stairs(Vf_dif);
+% hold on
+% stairs(Vf);
+% grid();
 
 %% FUNCTIONS
 function Rt = R_x(y)

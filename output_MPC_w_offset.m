@@ -185,7 +185,7 @@ disp('------------------------------------------------------------------');
 disp('                Simulating Output MPC System');
 disp('------------------------------------------------------------------');
 disp('');
-disp('Simulation time: 15 seconds');
+fprintf('Simulation time: %d seconds\n',simTime);
 disp('');
 
 for k = 1:1:T
