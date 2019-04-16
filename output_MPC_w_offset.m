@@ -32,7 +32,7 @@ check_controllability(sysc);
 
 %% DISCRETIZE SYSTEM
 simTime = 15;   % simulation time in seconds
-h = 0.04;       % sampling time in seconds
+h = 0.10;       % sampling time in seconds
 
 sysd = c2d(sysc,h);
 T = simTime/h;
@@ -65,6 +65,15 @@ x0 = [0.005 0 0.01 0 0 0  0.005 0 0.04 0  0 0  0.02 0  0.03 0]';
 xhat0 = zeros(1,16);
  
 % desired output reference 
+% y_ref_OTS = [zeros(1,T);                    % r 
+%              zeros(1,2*T/5) -1*ones(1,3*T/5);   % x
+%              zeros(1,T);                    % beta
+%              zeros(1,T);                    % s
+%              zeros(1,2*T/5)  1*ones(1,3*T/5);   % y
+%              zeros(1,T);                    % gamma
+%              zeros(1,T);                    % z
+%              zeros(1,2*T/5)  1*ones(1,3*T/5)];  % yaw 
+%          
 y_ref_OTS = [zeros(1,T);                    % r 
              zeros(1,T/3) -1*ones(1,2*T/3);   % x
              zeros(1,T);                    % beta
@@ -73,16 +82,7 @@ y_ref_OTS = [zeros(1,T);                    % r
              zeros(1,T);                    % gamma
              zeros(1,T);                    % z
              zeros(1,T/3)  1*ones(1,2*T/3)];  % yaw 
-         
-% y_ref_OTS = [zeros(1,T);                    % r 
-%              zeros(1,T);   % x
-%              zeros(1,T);                    % beta
-%              zeros(1,T);                    % s
-%              zeros(1,T);    % y
-%              zeros(1,T);                    % gamma
-%              zeros(1,T);                    % z
-%              zeros(1,T)];    % yaw 
-         
+          
 n_d = 2;
 
 % Optimal Target Selection reference states and inputs
@@ -90,8 +90,12 @@ x_ref_OTS = zeros(16,T);
 u_ref_OTS = zeros(4,T);
 dhat = zeros(n_d,T);
  
+n_d = 1;
 % disturbance input (x)
-d_dist = [zeros(n_d,T/15) 0.01*ones(n_d,T/15) zeros(n_d,8*T/15) 0.01*ones(n_d,5*T/15)];  
+d_dist = [zeros(n_d,T/15) 0.01*ones(n_d,T/15) zeros(n_d,8*T/15) 0.01*ones(n_d,5*T/15);
+          zeros(n_d,T/15) 0.01*ones(n_d,T/15) zeros(n_d,5*T/15) 0.01*ones(n_d,8*T/15)];  
+n_d = 2;
+% d_dist = [zeros(n_d,T/5) 0.01*ones(n_d,T/5) zeros(n_d,3*T/5)];
 
 x = zeros(length(A(:,1)),T);        % state trajectory
 yplot = zeros(length(A(:,1)),T);    % output to plot
@@ -125,7 +129,7 @@ R = 0.1*eye(length(B(1,:)));    % input cost
 [S,~,~] = dare(A,B,Q,R);        % terminal cost % OLD: S = 10*eye(size(A));
 
 % prediction horizon
-N = 18; 
+N = 10; 
 
 Qbar = kron(Q,eye(N));
 Rbar = kron(R,eye(N));
@@ -259,23 +263,51 @@ end
 % states_trajectory: Nx16 matrix of output trajectory of 16 states
 states_trajectory = yplot';
 
+saved_data.t = t;
+saved_data.x = yplot;
+saved_data.u = u;
+
+%%
 figure(91);
 clf;
 % plot(t,xhat(:,1:end-1));
 hold on;
 plot(t,xhaug(:,1:end-1));
 % plot(t,e(:,1:end));
-legend('xh1','xh2','xh3','xh4','xh5','xh6','xh7','xh8','xh9','xh10','xh11','xh12','xh13','xh14','xh15','xh16','d'); %,'x1','x2','x3','x4','x5','x6','x7','x8','x9','x10','x11','x12','x13','x14','x15','x16');
+legend('xh1','xh2','xh3','xh4','xh5','xh6','xh7','xh8','xh9','xh10','xh11','xh12','xh13','xh14','xh15','xh16','d1','d2'); %,'x1','x2','x3','x4','x5','x6','x7','x8','x9','x10','x11','x12','x13','x14','x15','x16');
 grid on;
+
+%%
+
+figure(93);
+clf;
+% plot(t,xhat(:,1:end-1));
+hold on;
+plot(t,x_ref_OTS(:,1:end));
+ylim([-1.5 2.5]);
+% plot(t,e(:,1:end));
+legend('r','rd','x','xd','beta','betad','s','sd','y','yd','gamma','gammad','z','zd','yaw','yawd'); %,'x1','x2','x3','x4','x5','x6','x7','x8','x9','x10','x11','x12','x13','x14','x15','x16');
+grid on;
+
+%%
 
 figure(92);
 clf;
+subplot 211
 hold on;
-plot(t,xhaug(17,2:end));
-plot(t,d_dist);
+plot(t,25*d_dist(1,:),'r-');
+plot(t,25*xhaug(17,2:end),'b-');
 grid on;
-legend('d estimated','d');
-title('Estimated disturbance');
+ylim([-0.02 0.28]);
+legend('$d_1$','$d_1$ estimated','interpreter','latex','Location','southeast');
+subplot 212
+hold on;
+plot(t,25*d_dist(2,:),'r-');
+plot(t,25*xhaug(18,2:end),'b-');
+grid on;
+ylim([-0.02 0.31]);
+legend('$d_2$','$d_2$ estimated','interpreter','latex','Location','southeast');
+% title('Estimated disturbance');
 
 %% PLOT RESULTS
 

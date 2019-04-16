@@ -19,13 +19,13 @@ I_yy = 3.2e-3;  % kg m^2 (Quadrotor inertia around y-axis)
 I_xx = I_yy;    % kg m^2 (Quadrotor inertia around x-axis)      
 I_zz = 5.5e-3;  % kg m^2 (Quadrotor inertia around z-axis)
 
-simTime = 8;   % 2 second simulation
+simTime = 10;   % 2 second simulation
 h = 0.1;       % sampling time
 N = simTime/h;        
 
 % define desired set point sequences in terms of Radius and Omega
 R_radius_sequence = 2*ones(1,N+1);                  % meters (radius of turn)
-Omega_sequence = 1*ones(1,N+1) + 0.0035*(1:N+1);    % rad/s (rotational velocity)
+Omega_sequence = 1*ones(1,N+1) + 0.007*(1:N+1);    % rad/s (rotational velocity)
 OmegaAngle_prev = 0;
 
 %% INITIALIZE VARIABLE SEQUENCES

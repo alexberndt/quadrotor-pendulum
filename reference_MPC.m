@@ -24,7 +24,7 @@ check_controllability(sysc);
 %% DISCRETIZE SYSTEM
 
 % simulation time in seconds
-simTime = 4;
+simTime = 10;
 h = 0.1;
 
 sysd = c2d(sysc,h);
@@ -39,6 +39,8 @@ C = sysd.C;
 % initial state
 %     r1   r2 x1 x2 b1 b2    s1 s2 y1 y2 g1 g2   z1 z2   yaw1 yaw2
 x0 = [0.05 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0]';
+x0 = [0.02 0 0.01 0 0 0  0.02 0 0.04 0 0 0  0 0  0 0]';
+
 
 % desired reference (x,y,z,yaw)
 r = [zeros(1,T);     % x reference
@@ -71,18 +73,17 @@ x(:,1) = x0';
 %          k = 0
 
 % tuning weights
-Q = 1*eye(size(A));            % state cost
-R = 1*eye(length(B(1,:)));    % input cost
+Q = 10*eye(size(A));            % state cost
+R = 0.1*eye(length(B(1,:)));    % input cost
 
 % terminal cost = unconstrained optimal cost (Lec 5 pg 6)
 [S,~,~] = dare(A,B,Q,R);        % terminal cost % OLD: S = 10*eye(size(A));
 
-S = Q;
-
+% S = Q;
 % S = 1000*eye(16);
 
 % prediction horizon
-N = 18; 
+N = 20; 
 
 Qbar = kron(Q,eye(N));
 Rbar = kron(R,eye(N));
@@ -187,15 +188,15 @@ saved_data.u = u;
 plot_2D_plots(t, states_trajectory);
 % 
 % % plot the inputs
-plot_inputs(t,u,u_limit);
+% plot_inputs(t,u,u_limit);
 
 %% Comparison Plots
 
-plot_comparison_S_different(); % 543
-plot_comparison_R_different(); % 544
-plot_comparison_Q_different(); % 546
-
-plot_comparison_R_inputs();    % 589
+% plot_comparison_S_different(); % 543
+% plot_comparison_R_different(); % 544
+% plot_comparison_Q_different(); % 546
+% 
+% plot_comparison_R_inputs();    % 589
 
 %%
-plot_comparison_MPC_LQR();     % 567
+% plot_comparison_MPC_LQR();     % 567

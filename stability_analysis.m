@@ -100,7 +100,7 @@ inSet = all(Xf_set_H*x0 <= Xf_set_h);
 % to determine which states can be steered to the terminal set X_f in N 
 % steps.
 
-fprintf('\tDetermining X_N emperically ...\n');
+fprintf('\tDetermining X_N emperically for different Beta values ...\n');
 
 N = 10;                     % prediction horizon
 fprintf('\t - N = %i (prediction horizon) \n',N);
@@ -133,21 +133,22 @@ dim.nu = size(Bd,2);
 dim.ny = size(Cd,1);
 
 [P,Z,W] = predmodgen(LTI,dim);
-              
-
-
+             
 % define input constraints
 u_limit = 0.1;
 lb = -u_limit*ones(4*N,1);
 ub = u_limit*ones(4*N,1);
 
+Aeq = Xf_set_H;
+beq = Xf_set_h;
+
 % Define IC_test_vals as the set of initial conditions to consider
 r = 1;
 s = 1;
 
-res = 10;
-bnd_x = 0.2;
-bnd_y = 0.2;
+res = 30;
+bnd_x = 1.5;
+bnd_y = 1.5;
 
 mat = zeros(res,res,3);
 % matPedro = zeros(res,res);
@@ -212,12 +213,15 @@ fprintf('\tplotting results ... \n');
 figure(1);
 subplot(3,1,1);
 imagesc(mat(:,:,1));
+ylabel('$\beta$ = 0.1','interpreter','latex');
 
 subplot(3,1,2);
 imagesc(mat(:,:,2));
+ylabel('$\beta$ = 1.0','interpreter','latex');
 
 subplot(3,1,3);
 imagesc(mat(:,:,3));
+ylabel('$\beta$ = 10','interpreter','latex');
 
 fprintf('\tdone! \n');
 
@@ -243,16 +247,129 @@ fprintf('\tdone! \n');
 % figure(9);
 % plot(x(k),y(k),'r-',x,y,'b*')
 
-%%
+%% TEST IF MPC LAW GUIDES TOWARDS X_f IN N-STEPS
 
+% Having constructed X_f, we empirically construct a state X_N (calygraph X) 
+% to determine which states can be steered to the terminal set X_f in N 
+% steps.
 
+fprintf('\tDetermining X_N emperically ...\n');
 
-% 
-% H = [1 2; 0 5];
-% f = [1; 3];
-% 
-% [X,fval,exitflag,output,lambda,Tsolve,c,G,h,dims,Aeq,beq] = ecosqp(H,f);
-% 
+N = 10;                     % prediction horizon
+fprintf('\t - N = %i (prediction horizon) \n',N);
+
+x = zeros(dim.nx,N+1);      % state trajectory
+
+% initial state
+x0 = [0.05 0 0.1 0 0 0  0.05 0 0.4 0 0 0  0.2 0  0.3 0]';
+x(:,1) = x0;
+
+% tuning weights
+Q = 10*eye(dim.nx);         % state cost
+R = 0.1*eye(dim.nu);        % input cost
+
+% terminal cost = unconstrained optimal cost (Lec 5 pg 6)
+[S,~,~] = dare(Ad,Bd,Q,R);  % terminal cost % OLD: S = 10*eye(size(A));
+
+% determine prediction matrices
+Qbar = kron(Q,eye(N));
+Rbar = kron(R,eye(N));
+Sbar = S;
+
+LTI.A = Ad;
+LTI.B = Bd;
+LTI.C = Cd;
+
+dim.N = N;
+dim.nx = size(Ad,1);
+dim.nu = size(Bd,2);
+dim.ny = size(Cd,1);
+
+[P,Z,W] = predmodgen(LTI,dim);
+             
+% define input constraints
+u_limit = 0.1;
+lb = -u_limit*ones(4*N,1);
+ub = u_limit*ones(4*N,1);
+
+Aeq = Xf_set_H;
+beq = Xf_set_h;
+
+% Define IC_test_vals as the set of initial conditions to consider
+r = 1;
+s = 1;
+
+res = 50;
+bnd_x = 0.8;
+bnd_y = 0.8;
+
+mat_plot = zeros(res,res);
+betaVal = 1;
+    
+Sbar = betaVal*S;
+
+H = (Z'*Qbar*Z + Rbar + 2*W'*Sbar*W);
+d = (x0'*P'*Qbar*Z + 2*x0'*(Ad^N)'*Sbar*W)';
+
+r = 1;
+
+% loop through different initial conditions 
+for initial_r = linspace(-bnd_x,bnd_x,res)
+    s = 1;
+    for initial_s = linspace(-bnd_y,bnd_y,res)
+        x(:,1) = [initial_r initial_s 0 0 0 0  0 0 0 0 0 0  0 0  0 0]';
+        for k = 1:N     
+            % define current state position
+            x_current = x(:,k);
+            d = (x_current'*P'*Qbar*Z + 2*x_current'*(Ad^N)'*Sbar*W)';
+            warning off
+            % solve QP problem
+            opts = optimoptions('quadprog','Display','off');
+            uopt = quadprog(H,d,[],[],[],[],lb,ub,[],opts);
+            warning on
+
+            % obtain optimal control action at k=0
+            u(:,k) = uopt(1:4);
+
+            % apply control action
+            x(:,k+1) = Ad*x(:,k) + Bd*u(:,k);
+        end
+        inSet = all(Xf_set_H*x(:,N+1) <= Xf_set_h);
+        mat_plot(r,s) = inSet;
+        % matPedro(r,s) = all(H_pedro*x(:,N+1) <= h_pedro);
+        s = s+1;
+    end
+    r = r+1;
+end
+
+fprintf('\tdone!\n');
+
+% plot the initial conditions which were steered towards the terminal set
+% X_f within N steps
+
+fprintf('\tplotting results ... \n');
+figure(2);
+hold on;
+
+r = 1;
+for r_plot = linspace(-bnd_x,bnd_x,res)
+    s = 1;
+    for s_plot = linspace(-bnd_y,bnd_y,res)
+        if (mat_plot(r,s) == 1)
+            plot(r_plot,s_plot,'sg','MarkerFaceColor','g','MarkerEdgeColor','g','MarkerSize',8);
+        else
+            plot(r_plot,s_plot,'sr','MarkerFaceColor','r','MarkerEdgeColor','r','MarkerSize',8);
+        end
+        s = s+1;
+    end
+    r = r+1;
+end
+xlabel('r');
+ylabel('$\dot{r}$','interpreter','latex');
+grid on;
+xlim([-1.05*bnd_x 1.05*bnd_x]);
+ylim([-1.05*bnd_y 1.05*bnd_y]);
+fprintf('\tdone! \n');
 
 
 

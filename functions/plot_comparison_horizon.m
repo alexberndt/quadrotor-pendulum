@@ -1,11 +1,11 @@
-function plot_comparison_MPC_LQR()
+function plot_comparison_horizon()
 
     % INPUTS = time, states_trajectory
     
-    load('variables/MPC_vs_LQR/LQR_Q_1_R_1_x0_in_Xf.mat');
-    fignum = 567;
-    time = saved_data.t;
-    states_trajectory = saved_data.x;
+    load('variables/Horizon/offset_01/N1.mat');
+    fignum = 789;
+    time = saved_data.t';
+    states_trajectory = saved_data.x';
 
     % Show 6 States of x-direction control
     figure(fignum);
@@ -25,9 +25,10 @@ function plot_comparison_MPC_LQR()
 
     hold on;
     
-    load('variables/MPC_vs_LQR/MPC_Q_1_R_1_x0_in_Xf.mat');
-    time = saved_data.t;
-    states_trajectory = saved_data.x;
+    
+    load('variables/Horizon/offset_01/N2.mat');
+    time = saved_data.t';
+    states_trajectory = saved_data.x';
     figure(fignum);
     hold on;
     subplot 311;
@@ -37,6 +38,19 @@ function plot_comparison_MPC_LQR()
     subplot 313;
     stairs(time, states_trajectory(:,5));
     
-    legend('LQR','MPC');
+    load('variables/Horizon/offset_01/N10.mat');
+    time = saved_data.t';
+    states_trajectory = saved_data.x';
+    figure(fignum);
+    hold on;
+    subplot 311;
+    stairs(time, states_trajectory(:,1));
+    subplot 312;
+    stairs(time, states_trajectory(:,3));
+    subplot 313;
+    stairs(time, states_trajectory(:,5));
+    
+    
+    legend('N = 1','N = 2','N = 10');
 
 end
