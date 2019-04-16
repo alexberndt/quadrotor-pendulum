@@ -186,12 +186,12 @@ other.gamma_angle = gamma_angle;
 
 plot_rotational(t,x,u,other);
 
-% stability plots
-figure(123);
-Vf_dif = Vf(2:end) - Vf(1:end-1);
-stairs(Vf_dif);
-hold on
-stairs(Vf);
+% % stability plots
+% figure(123);
+% Vf_dif = Vf(2:end) - Vf(1:end-1);
+% stairs(Vf_dif);
+% hold on
+% stairs(Vf);
 
 %% FUNCTIONS
 function Rt = R_x(y)

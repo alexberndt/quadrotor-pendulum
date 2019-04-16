@@ -102,8 +102,8 @@ plot_2D_plots(t, states_trajectory);
 % plot_inputs(t,u,0.1);
 
 % show 3D simulation
-% X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
-% visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]));
+X = states_trajectory(:,[3 9 13 11 5 15 1 7]);
+visualize_quadrotor_trajectory(states_trajectory(:,[3 9 13 11 5 15 1 7]));
 
 saved_data.t = t;
 saved_data.x = states_trajectory;

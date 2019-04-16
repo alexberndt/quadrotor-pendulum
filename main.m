@@ -5,19 +5,22 @@ clear
 
 %% Simulate System
 
+close all
+run('adaptive_LQR.m');
+
 answer = questdlg('Which simulation to run?', ...
 	'Simulations', ...
-	'Adaptive MPC','Disturbance Output MPC','Stability Analysis','Cancel'); % 'Stability Analysis',
+	'Regulation MPC','Disturbance Output MPC','Stability Analysis','Cancel'); % 'Stability Analysis',
 % Handle response
 switch answer
 %     case 'Reference MPC'
 %         close all
 %         disp(['Running: ' answer]) 'Reference MPC',
 %         run('reference_MPC.m');
-    case 'Adaptive MPC'
+    case 'Regulation MPC'
         close all
         disp(['Running: ' answer])
-        run('adaptive_MPC.m');
+        run('reference_MPC.m');
     case 'Disturbance Output MPC'
         close all
         disp(['Running: ' answer])
